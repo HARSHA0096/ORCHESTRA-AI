@@ -1,0 +1,14 @@
+{
+  "name": "@orchestra/queue",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "bullmq": "^5.25.0",
+    "@orchestra/config": "workspace:*",
+    "@orchestra/logger": "workspace:*",
+    "@orchestra/redis": "workspace:*"
+  }
+}

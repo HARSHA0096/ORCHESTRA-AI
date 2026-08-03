@@ -1,0 +1,7 @@
+export const DEFAULTS = {
+  PAGE: 1,
+  PER_PAGE: 20,
+  MAX_PER_PAGE: 100,
+  RATE_LIMIT: 100,
+  REQUEST_TIMEOUT_MS: 30000,
+} as const;

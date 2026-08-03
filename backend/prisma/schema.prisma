@@ -1,0 +1,391 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────────
+// Enums
+// ──────────────────────────────────────────────
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum OrgStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum OrgPlan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+enum ProjectStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum ProviderStatus {
+  ACTIVE
+  INACTIVE
+  DEGRADED
+}
+
+enum ProviderType {
+  OPENAI
+  ANTHROPIC
+  GOOGLE
+  AZURE
+  COHERE
+  MISTRAL
+  META
+  CUSTOM
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ORG_ADMIN
+  DEVELOPER
+  VIEWER
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  ERROR
+  SUCCESS
+  SYSTEM
+}
+
+// ──────────────────────────────────────────────
+// Models
+// ──────────────────────────────────────────────
+
+model User {
+  id            String     @id @default(uuid()) @db.Uuid
+  email         String     @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  emailVerified Boolean    @default(false)
+  status        UserStatus @default(ACTIVE)
+  lastLoginAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+
+  sessions           Session[]
+  orgMemberships     OrgMembership[]
+  projectMemberships ProjectMember[]
+  auditLogs          AuditLog[]
+  notifications      Notification[]
+  createdApiKeys     ApiKey[]
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model Organization {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String    @unique
+  description String?
+  plan        OrgPlan   @default(FREE)
+  status      OrgStatus @default(ACTIVE)
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  members        OrgMembership[]
+  projects       Project[]
+  apiKeys        ApiKey[]
+  auditLogs      AuditLog[]
+  configurations Configuration[]
+
+  @@index([slug])
+  @@index([status])
+  @@map("organizations")
+}
+
+model OrgMembership {
+  id             String       @id @default(uuid()) @db.Uuid
+  userId         String       @db.Uuid
+  organizationId String       @db.Uuid
+  role           UserRole     @default(DEVELOPER)
+  status         MemberStatus @default(ACTIVE)
+  invitedBy      String?      @db.Uuid
+  invitedAt      DateTime?
+  joinedAt       DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+  @@map("org_memberships")
+}
+
+model Project {
+  id             String        @id @default(uuid()) @db.Uuid
+  name           String
+  slug           String
+  description    String?
+  organizationId String        @db.Uuid
+  status         ProjectStatus @default(ACTIVE)
+  archived       Boolean       @default(false)
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      ProjectMember[]
+  apiKeys      ApiKey[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@index([status])
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  projectId String   @db.Uuid
+  role      UserRole @default(DEVELOPER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@map("project_members")
+}
+
+model ApiKey {
+  id             String       @id @default(uuid()) @db.Uuid
+  keyHash        String       @unique
+  keyPrefix      String
+  name           String
+  description    String?
+  organizationId String       @db.Uuid
+  projectId      String       @db.Uuid
+  scopes         String[]     @default([])
+  status         ApiKeyStatus @default(ACTIVE)
+  expiresAt      DateTime?
+  lastUsedAt     DateTime?
+  rateLimit      Int          @default(100)
+  createdById    String       @db.Uuid
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation(fields: [createdById], references: [id])
+
+  @@index([keyHash])
+  @@index([keyPrefix])
+  @@index([projectId])
+  @@index([organizationId])
+  @@index([status])
+  @@map("api_keys")
+}
+
+model Provider {
+  id          String         @id @default(uuid()) @db.Uuid
+  name        String         @unique
+  displayName String
+  type        ProviderType
+  status      ProviderStatus @default(ACTIVE)
+  baseUrl     String?
+  description String?
+  config      Json?
+  iconUrl     String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+
+  models ProviderModel[]
+
+  @@map("providers")
+}
+
+model ProviderModel {
+  id              String         @id @default(uuid()) @db.Uuid
+  providerId      String         @db.Uuid
+  modelId         String
+  name            String
+  description     String?
+  inputCostPer1k  Decimal?       @db.Decimal(10, 6)
+  outputCostPer1k Decimal?       @db.Decimal(10, 6)
+  contextWindow   Int?
+  maxOutputTokens Int?
+  status          ProviderStatus @default(ACTIVE)
+  capabilities    String[]       @default([])
+  metadata        Json?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, modelId])
+  @@map("provider_models")
+}
+
+model Session {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @db.Uuid
+  token            String   @unique
+  refreshToken     String   @unique
+  expiresAt        DateTime
+  refreshExpiresAt DateTime
+  ipAddress        String?
+  userAgent        String?
+  deviceName       String?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([refreshToken])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Role {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String  @unique
+  description String?
+  isSystem    Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(uuid()) @db.Uuid
+  resource    String
+  action      String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roles RolePermission[]
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String @id @default(uuid()) @db.Uuid
+  roleId       String @db.Uuid
+  permissionId String @db.Uuid
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model AuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String?  @db.Uuid
+  organizationId String?  @db.Uuid
+  action         String
+  resource       String
+  resourceId     String?
+  description    String?
+  metadata       Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @db.Uuid
+  type      NotificationType @default(INFO)
+  title     String
+  body      String?
+  read      Boolean          @default(false)
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model Configuration {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String? @db.Uuid
+  key            String
+  value          Json
+  environment    String  @default("production")
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key, environment])
+  @@map("configurations")
+}

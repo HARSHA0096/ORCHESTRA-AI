@@ -1,0 +1,17 @@
+{
+  "name": "@orchestra/auth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "jsonwebtoken": "^9.0.0",
+    "argon2": "^0.41.0",
+    "@orchestra/config": "workspace:*",
+    "@orchestra/errors": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.0"
+  }
+}

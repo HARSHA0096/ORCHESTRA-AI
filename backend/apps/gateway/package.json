@@ -1,0 +1,36 @@
+{
+  "name": "@orchestra/gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "fastify": "^5.1.0",
+    "@fastify/cors": "^10.0.0",
+    "@fastify/helmet": "^12.0.0",
+    "@fastify/rate-limit": "^10.1.0",
+    "@fastify/swagger": "^9.2.0",
+    "@fastify/swagger-ui": "^5.1.0",
+    "@fastify/compress": "^8.0.0",
+    "@fastify/cookie": "^11.0.0",
+    "socket.io": "^4.8.0",
+    "@orchestra/config": "workspace:*",
+    "@orchestra/database": "workspace:*",
+    "@orchestra/redis": "workspace:*",
+    "@orchestra/logger": "workspace:*",
+    "@orchestra/auth": "workspace:*",
+    "@orchestra/errors": "workspace:*",
+    "@orchestra/validation": "workspace:*",
+    "@orchestra/middleware": "workspace:*",
+    "@orchestra/shared": "workspace:*",
+    "@orchestra/events": "workspace:*",
+    "@orchestra/queue": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

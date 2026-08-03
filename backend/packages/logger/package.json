@@ -1,0 +1,12 @@
+{
+  "name": "@orchestra/logger",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "pino": "^9.5.0",
+    "pino-pretty": "^11.3.0"
+  }
+}
