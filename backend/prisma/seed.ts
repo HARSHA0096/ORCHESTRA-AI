@@ -2,6 +2,53 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+
+async function seedDemoData(): Promise<string | undefined> {
+  if (process.env.DEMO_MODE !== 'true') return undefined;
+
+  const organization = await prisma.organization.upsert({
+    where: { slug: 'orchestra-demo' },
+    update: { name: 'ORCHESTRA Demo Organization', status: 'ACTIVE' },
+    create: { name: 'ORCHESTRA Demo Organization', slug: 'orchestra-demo', description: 'Deterministic submission/demo environment.' },
+  });
+
+  const project = await prisma.project.upsert({
+    where: { organizationId_slug: { organizationId: organization.id, slug: 'orchestra-demo' } },
+    update: { name: 'ORCHESTRA Demo Project', status: 'ACTIVE' },
+    create: { name: 'ORCHESTRA Demo Project', slug: 'orchestra-demo', organizationId: organization.id, description: 'Submission demo project.' },
+  });
+
+  const provider = await prisma.provider.upsert({
+    where: { name: 'demo' },
+    update: { displayName: 'Orchestra Demo', status: 'ACTIVE', type: 'CUSTOM' },
+    create: { name: 'demo', displayName: 'Orchestra Demo', status: 'ACTIVE', type: 'CUSTOM', description: 'Deterministic provider for evaluation and demos.' },
+  });
+
+  const models = [
+    ['orchestra-demo-model', 'Orchestra Demo Model'],
+    ['orchestra-fast-demo', 'Orchestra Fast Demo'],
+    ['orchestra-reasoning-demo', 'Orchestra Reasoning Demo'],
+    ['orchestra-demo-failure', 'Orchestra Demo Failure'],
+  ];
+  for (const [modelId, name] of models) {
+    await prisma.providerModel.upsert({
+      where: { providerId_modelId: { providerId: provider.id, modelId } },
+      update: { name, inputCostPer1k: 0.001, outputCostPer1k: 0.002, contextWindow: 128000, maxOutputTokens: 8192, status: 'ACTIVE', capabilities: ['chat', 'streaming'] },
+      create: { providerId: provider.id, modelId, name, inputCostPer1k: 0.001, outputCostPer1k: 0.002, contextWindow: 128000, maxOutputTokens: 8192, status: 'ACTIVE', capabilities: ['chat', 'streaming'] },
+    });
+  }
+
+  const existingBudget = await prisma.budget.findFirst({ where: { projectId: project.id, deletedAt: null }, orderBy: { updatedAt: 'desc' } });
+  if (existingBudget) {
+    await prisma.budget.update({ where: { id: existingBudget.id }, data: { limitAmount: 100, currency: 'USD' } });
+  } else {
+    await prisma.budget.create({ data: { projectId: project.id, period: 'MONTHLY', limitAmount: 100, currentSpend: 0, currency: 'USD' } });
+  }
+
+  console.log(`  ✓ Demo project: ${project.id}`);
+  return project.id;
+}
+
 async function seed(): Promise<void> {
   console.log('🌱 Seeding database...');
 
@@ -96,6 +143,9 @@ async function seed(): Promise<void> {
 
     console.log(`  ✓ Role "${roleDef.name}" → ${rolePermissions.length} permissions`);
   }
+
+  const demoProjectId = await seedDemoData();
+  if (demoProjectId) console.log(`  DEMO_PROJECT_ID=${demoProjectId}`);
 
   console.log('✅ Seeding complete!');
 }

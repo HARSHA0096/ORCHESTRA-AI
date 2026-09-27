@@ -34,6 +34,15 @@ export interface Config {
   };
   apiKey: {
     salt: string;
+    openAiApiKey?: string;
+    anthropicApiKey?: string;
+  };
+  development: {
+    projectId?: string;
+  };
+  demo: {
+    enabled: boolean;
+    projectId?: string;
   };
   cors: {
     origins: string[];
@@ -68,6 +77,15 @@ export const config: Config = {
   },
   apiKey: {
     salt: env.API_KEY_SALT,
+    openAiApiKey: env.OPENAI_API_KEY,
+    anthropicApiKey: env.ANTHROPIC_API_KEY,
+  },
+  development: {
+    projectId: env.DEVELOPMENT_PROJECT_ID,
+  },
+  demo: {
+    enabled: env.DEMO_MODE && env.NODE_ENV !== 'test',
+    projectId: env.DEMO_PROJECT_ID,
   },
   cors: {
     origins: env.CORS_ORIGINS.split(',').map((o) => o.trim()),

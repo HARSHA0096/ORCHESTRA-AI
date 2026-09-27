@@ -1,0 +1,47 @@
+type Project @table {
+  name: String!
+  ownerId: UUID!
+  description: String
+  createdAt: Timestamp
+}
+
+type ProviderConfig @table {
+  providerType: String!
+  apiKeyEncrypted: String!
+  baseEndpoint: String!
+  rateLimitConfig: String
+  status: String
+  project: Project!
+}
+
+type GatewayKey @table {
+  keyHash: String!
+  status: String!
+  expiresAt: Timestamp
+  usageLimit: Int64
+  project: Project!
+}
+
+type RoutingRule @table {
+  priority: Int!
+  modelFilter: String
+  trafficWeight: Float
+  project: Project!
+  targetProvider: ProviderConfig!
+}
+
+type RequestLog @table {
+  latencyMs: Int!
+  cost: Float!
+  modelUsed: String
+  statusCode: Int
+  errorMessage: String
+  gatewayKey: GatewayKey!
+  provider: ProviderConfig!
+}
+
+type SecurityPolicy @table {
+  policyType: String!
+  configurationJson: String
+  project: Project!
+}

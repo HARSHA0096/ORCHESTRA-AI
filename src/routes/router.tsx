@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageHero, Panel, StatCard, Modal, Btn } from "@/components/app-shell";
-import { Router as RouterIcon, Zap, GitFork, Sparkles, Plus, Pencil, Trash2 } from "lucide-react";
+import { Router as RouterIcon, GitFork, Plus, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -20,13 +20,7 @@ type Rule = {
   from: string; to: string; weight: number; hits: string; enabled: boolean;
 };
 
-const SEED: Rule[] = [
-  { id: "r1", name: "Default Chat",      strategy: "cheapest-quality", from: "*",          to: "GPT-4o → Claude 3.5",   weight: 100, hits: "82.4k", enabled: true },
-  { id: "r2", name: "Long Context",      strategy: "context-aware",    from: "tokens>32k", to: "Gemini 1.5 Pro",        weight: 100, hits: "12.1k", enabled: true },
-  { id: "r3", name: "Embeddings",        strategy: "fastest",          from: "/embeddings",to: "text-embedding-3",      weight: 100, hits: "44.0k", enabled: true },
-  { id: "r4", name: "Failover OpenAI",   strategy: "fallback",         from: "openai:*",   to: "Claude 3.5 Sonnet",     weight: 100, hits: "1.2k",  enabled: true },
-  { id: "r5", name: "EU Data Residency", strategy: "geo-pin",          from: "region:eu",  to: "Mistral Large (FR)",    weight: 100, hits: "8.7k",  enabled: true },
-];
+const SEED: Rule[] = [];
 
 const STORAGE = "orchestra.router.rules";
 const STRATEGIES: Rule["strategy"][] = ["cheapest-quality", "context-aware", "fastest", "fallback", "geo-pin"];
@@ -80,10 +74,10 @@ function RouterPage() {
       />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Active Rules"  value={String(active)} delta="+2" color="var(--neon-violet)" icon={GitFork} />
-        <StatCard label="Routed (24h)"  value="148k"   delta="+18%"  color="var(--neon-cyan)"   icon={RouterIcon} />
-        <StatCard label="Avg Decision"  value="3.2ms"  delta="-0.4ms" color="var(--neon-green)" icon={Zap} />
-        <StatCard label="Quality Score" value="9.4/10" delta="+0.2"   color="var(--neon-pink)"  icon={Sparkles} />
+        <StatCard label="Active Rules" value={String(active)} delta="Current" color="var(--neon-violet)" icon={GitFork} />
+        <StatCard label="Routed (24h)" value="0" delta="No data" color="var(--neon-cyan)" icon={RouterIcon} />
+        <StatCard label="Avg Decision" value="—" delta="No data" color="var(--neon-green)" icon={RouterIcon} />
+        <StatCard label="Quality Score" value="—" delta="No data" color="var(--neon-pink)" icon={GitFork} />
       </section>
 
       <Panel

@@ -28,7 +28,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { icon: LayoutDashboard, label: "Dashboard",  to: "/",         shortcut: "⌘1" },
       { icon: Boxes,           label: "Projects",   to: "/projects", shortcut: "⌘2" },
       { icon: Network,         label: "Gateway",    to: "/gateway",  shortcut: "⌘3" },
-      { icon: Shield,          label: "Security",   to: "/security", shortcut: "⌘4", badge: "4" },
+      { icon: Shield,          label: "Security",   to: "/security", shortcut: "⌘4",  },
       { icon: KeyRound,        label: "API Keys",   to: "/api-keys" },
       { icon: History,         label: "History",    to: "/history" },
     ],
@@ -47,7 +47,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Workspace",
     items: [
       { icon: LineIcon,   label: "Analytics",     to: "/analytics" },
-      { icon: BellRing,   label: "Notifications", to: "/notifications", badge: "12" },
+      { icon: BellRing,   label: "Notifications", to: "/notifications",  },
       { icon: Settings,   label: "Settings",      to: "/settings" },
       { icon: User,       label: "Profile",       to: "/profile" },
     ],
@@ -384,6 +384,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
         <main className="min-w-0 flex-1 space-y-4">
           <TopBar />
+          {import.meta.env.VITE_DEMO_MODE === 'true' && (
+            <div className="flex items-center justify-between rounded-xl border border-[var(--neon-cyan)]/25 bg-[oklch(0.84_0.16_210/0.08)] px-3 py-2 text-xs">
+              <span className="font-medium text-[var(--neon-cyan)]">DEMO MODE</span>
+              <span className="text-muted-foreground">Deterministic provider · No external AI API key required</span>
+            </div>
+          )}
           <PageTransition id={pathname}>{children}</PageTransition>
         </main>
       </div>

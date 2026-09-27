@@ -25,14 +25,7 @@ type Notif = {
   read: boolean;
 };
 
-const SEED: Notif[] = [
-  { id: "n1", icon: ShieldAlert,  color: "var(--neon-red)",    title: "Prompt-injection burst blocked",   body: "14 attempts from 203.0.113.0/24 blocked by injection shield.", ts: "2m ago",  cat: "security",  read: false },
-  { id: "n2", icon: DollarSign,   color: "var(--neon-amber)",  title: "Budget threshold reached",          body: "Atlas Copilot used 70% of monthly budget ($3,500 / $5,000).",  ts: "12m ago", cat: "cost",      read: false },
-  { id: "n3", icon: CheckCircle2, color: "var(--neon-green)",  title: "Self-heal recovered OpenAI outage", body: "Routed 1,284 requests via Claude 3.5 for 14s.",                 ts: "32m ago", cat: "recovery",  read: false },
-  { id: "n4", icon: Sparkles,     color: "var(--neon-violet)", title: "New model available: GPT-5-mini",   body: "Auto-add to routing pool? Quality 9.4, cost -28% vs GPT-4o.",  ts: "1h ago",  cat: "platform",  read: true  },
-  { id: "n5", icon: AlertTriangle,color: "var(--neon-amber)",  title: "Gemini degraded",                   body: "Health 91% in eu-west. Traffic auto-shifted to us-east.",       ts: "2h ago",  cat: "providers", read: true  },
-  { id: "n6", icon: BellRing,     color: "var(--neon-cyan)",   title: "Weekly digest ready",               body: "2.84M requests · $24,184 spend · 98.6% success.",               ts: "yesterday", cat: "report", read: true  },
-];
+const SEED: Notif[] = [];
 
 const FILTERS = ["All", "Unread", "Security", "Cost", "Recovery", "Platform"] as const;
 

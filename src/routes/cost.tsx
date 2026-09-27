@@ -15,23 +15,10 @@ export const Route = createFileRoute("/cost")({
   component: CostPage,
 });
 
-const byModel = [
-  { name: "GPT-4o",     spend: 4210, color: "var(--neon-violet)" },
-  { name: "Claude 3.5", spend: 2890, color: "var(--neon-cyan)" },
-  { name: "Gemini 1.5", spend: 1620, color: "var(--neon-pink)" },
-  { name: "DeepSeek",   spend: 410,  color: "var(--neon-green)" },
-  { name: "Mistral",    spend: 320,  color: "var(--neon-amber)" },
-  { name: "Ollama",     spend: 0,    color: "var(--neon-cyan)" },
-];
+const byModel: { name: string; spend: number; color: string }[] = [];
 
 type Budget = { project: string; used: number; cap: number };
-const SEED: Budget[] = [
-  { project: "Acme Production",  used: 8412, cap: 12000 },
-  { project: "Atlas Copilot",    used: 3201, cap: 5000 },
-  { project: "Compliance Vault", used: 1840, cap: 3000 },
-  { project: "Helios Analytics", used: 1022, cap: 2500 },
-  { project: "Voyager R&D",      used: 182,  cap: 1000 },
-];
+const SEED: Budget[] = [];
 
 function CostPage() {
   const [budgets, setBudgets] = useState<Budget[]>(SEED);
@@ -60,10 +47,10 @@ function CostPage() {
       />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="MTD Spend"        value="$24,184" delta="-8.2%"  color="var(--neon-green)"  icon={DollarSign} />
-        <StatCard label="Savings (routing)" value="$8,412" delta="+12.4%" color="var(--neon-cyan)"   icon={PiggyBank} />
-        <StatCard label="Cache Savings"    value="$2,108"  delta="+4.1%"  color="var(--neon-violet)" icon={TrendingDown} />
-        <StatCard label="Forecast EoM"     value="$31,420" delta="-5.6%"  color="var(--neon-pink)"   icon={Gauge} />
+        <StatCard label="MTD Spend"        value="$0" delta="No data"  color="var(--neon-green)"  icon={DollarSign} />
+        <StatCard label="Savings (routing)" value="$0" delta="No data" color="var(--neon-cyan)"   icon={PiggyBank} />
+        <StatCard label="Cache Savings"    value="$0"  delta="No data"  color="var(--neon-violet)" icon={TrendingDown} />
+        <StatCard label="Forecast EoM"     value="—" delta="No data"  color="var(--neon-pink)"   icon={Gauge} />
       </section>
 
       <Panel eyebrow="Distribution" title="Spend by Model (USD)">

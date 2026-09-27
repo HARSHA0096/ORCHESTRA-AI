@@ -19,14 +19,7 @@ type Provider = {
   enabled: boolean; color: string; key?: string;
 };
 
-const SEED: Provider[] = [
-  { id: "openai",    name: "OpenAI",    models: 14, latency: 412, uptime: 99.99, cost: "$0.012/1k", enabled: true,  color: "var(--neon-violet)" },
-  { id: "anthropic", name: "Anthropic", models: 6,  latency: 528, uptime: 99.92, cost: "$0.015/1k", enabled: true,  color: "var(--neon-cyan)" },
-  { id: "google",    name: "Google",    models: 8,  latency: 389, uptime: 99.87, cost: "$0.009/1k", enabled: true,  color: "var(--neon-pink)" },
-  { id: "deepseek",  name: "DeepSeek",  models: 4,  latency: 705, uptime: 99.61, cost: "$0.004/1k", enabled: true,  color: "var(--neon-green)" },
-  { id: "mistral",   name: "Mistral",   models: 5,  latency: 482, uptime: 99.78, cost: "$0.007/1k", enabled: false, color: "var(--neon-amber)" },
-  { id: "ollama",    name: "Ollama",    models: 12, latency: 248, uptime: 100,   cost: "free",      enabled: true,  color: "var(--neon-cyan)" },
-];
+const SEED: Provider[] = [];
 
 const STORAGE = "orchestra.providers";
 

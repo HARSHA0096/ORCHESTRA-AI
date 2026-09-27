@@ -27,13 +27,13 @@ export const Route = createFileRoute("/")({
   component: Dashboard,
 });
 
-/* ---------------- Mock live data ---------------- */
+/* ---------------- Data-driven dashboard ---------------- */
 
 const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: "Dashboard", shortcut: "⌘1", active: true },
   { icon: Boxes,           label: "Projects",     shortcut: "⌘2" },
   { icon: Network,         label: "Gateway",      shortcut: "⌘3" },
-  { icon: Shield,          label: "Security",     shortcut: "⌘4", badge: "4" },
+  { icon: Shield,          label: "Security",     shortcut: "⌘4",  },
   { icon: Gauge,           label: "Cost Intelligence", shortcut: "⌘5" },
   { icon: RouterIcon,      label: "Model Router", shortcut: "⌘6" },
   { icon: LifeBuoy,        label: "Self-Healing", shortcut: "⌘7" },
@@ -42,80 +42,42 @@ const SIDEBAR_ITEMS = [
   { icon: KeyRound,        label: "API Keys" },
   { icon: History,         label: "History" },
   { icon: LineIcon,        label: "Analytics" },
-  { icon: BellRing,        label: "Notifications", badge: "12" },
+  { icon: BellRing,        label: "Notifications",  },
   { icon: Settings,        label: "Settings" },
   { icon: User,            label: "Profile" },
 ];
 
-const trendData = Array.from({ length: 48 }, (_, i) => ({
-  t: i,
-  requests: 800 + Math.round(Math.sin(i / 3) * 220 + Math.random() * 180 + i * 8),
-  cost: 12 + Math.sin(i / 4) * 6 + Math.random() * 3,
-}));
+const trendData: { t: number; requests: number; cost: number }[] = [];
 
-const modelUsage = [
-  { name: "GPT-4o",   value: 42, fill: "var(--neon-violet)" },
-  { name: "Claude 3.5", value: 24, fill: "var(--neon-cyan)" },
-  { name: "Gemini 1.5", value: 18, fill: "var(--neon-pink)" },
-  { name: "DeepSeek",   value: 10, fill: "var(--neon-green)" },
-  { name: "Others",     value: 6,  fill: "var(--neon-amber)" },
-];
+const modelUsage: { name: string; value: number; fill: string }[] = [];
 
-const PROVIDERS = [
-  { name: "GPT-4o",     latency: 412, uptime: 99.99, health: 99, requests: 1284, avgCost: 0.012, color: "var(--neon-violet)" },
-  { name: "Claude 3.5", latency: 528, uptime: 99.92, health: 98, requests: 902,  avgCost: 0.015, color: "var(--neon-cyan)" },
-  { name: "Gemini 1.5", latency: 389, uptime: 99.87, health: 96, requests: 612,  avgCost: 0.009, color: "var(--neon-pink)" },
-  { name: "DeepSeek",   latency: 705, uptime: 99.61, health: 92, requests: 318,  avgCost: 0.004, color: "var(--neon-green)" },
-  { name: "Ollama",     latency: 248, uptime: 100,    health: 100, requests: 187, avgCost: 0,    color: "var(--neon-amber)" },
-];
+const PROVIDERS: { name: string; latency: number; uptime: number; health: number; requests: number; avgCost: number; color: string }[] = [];
 
-const SYSTEM_HEALTH = [
-  { name: "Gateway",     status: "healthy", value: 99 },
-  { name: "Database",    status: "healthy", value: 98 },
-  { name: "Redis Cache", status: "healthy", value: 99 },
-  { name: "WebSocket",   status: "healthy", value: 97 },
-  { name: "OpenAI",      status: "healthy", value: 99 },
-  { name: "Claude",      status: "healthy", value: 98 },
-  { name: "Gemini",      status: "degraded", value: 91 },
-  { name: "DeepSeek",    status: "healthy", value: 96 },
-  { name: "Ollama",      status: "healthy", value: 100 },
-  { name: "CPU",         status: "healthy", value: 34 },
-  { name: "Memory",      status: "warn",    value: 71 },
-  { name: "Response Time", status: "healthy", value: 412 },
-];
+const SYSTEM_HEALTH: { name: string; status: string; value: number }[] = [];
 
-const SECURITY_THREATS = [
-  { label: "Prompt Injections", value: 56, color: "var(--neon-pink)" },
-  { label: "SQL Injections",    value: 19, color: "var(--neon-violet)" },
-  { label: "Shell Commands",    value: 14, color: "var(--neon-amber)" },
-  { label: "File Access",       value: 8,  color: "var(--neon-cyan)" },
-  { label: "Other Threats",     value: 37, color: "var(--neon-red)" },
-];
+const SECURITY_THREATS: { label: string; value: number; color: string }[] = [];
 
-const REQUEST_SEED = [
-  { time: "10:51:23", project: "Travel Planner",  model: "GPT-4o",     status: "completed", cost: 0.012, latency: 412, tokens: 524,  stage: "Response" },
-  { time: "10:51:21", project: "Medical Assist.", model: "Claude 3.5", status: "blocked",   cost: 0,     latency: 0,   tokens: 0,    stage: "Security" },
-  { time: "10:51:18", project: "Coding Agent",    model: "Gemini 1.5", status: "recovered", cost: 0.007, latency: 980, tokens: 312,  stage: "Self-Heal" },
-  { time: "10:51:15", project: "Research Bot",    model: "GPT-4o",     status: "completed", cost: 0.023, latency: 384, tokens: 1280, stage: "Response" },
-  { time: "10:51:10", project: "Data Analyst",    model: "DeepSeek",   status: "completed", cost: 0.009, latency: 612, tokens: 720,  stage: "Response" },
-  { time: "10:51:06", project: "Support Bot",     model: "Claude 3.5", status: "routing",   cost: 0,     latency: 0,   tokens: 0,    stage: "Router"   },
-  { time: "10:51:02", project: "Content Studio",  model: "GPT-4o",     status: "completed", cost: 0.018, latency: 421, tokens: 942,  stage: "Response" },
-];
+const REQUEST_SEED: { time: string; project: string; model: string; status: string; cost: number; latency: number; tokens: number; stage: string }[] = [];
 
 const KPIS = [
-  { label: "Total Requests",   value: 124_786, delta: "+12.5%", suffix: "",   icon: Activity,  color: "var(--neon-violet)" },
-  { label: "Successful",       value: 121_540, delta: "+12.1%", suffix: "",   icon: Sparkles,  color: "var(--neon-green)" },
-  { label: "Failed",           value: 1112,    delta: "-3.2%",  suffix: "",   icon: AlertTriangle, color: "var(--neon-red)" },
-  { label: "Recovered",        value: 2089,    delta: "+22.1%", suffix: "",   icon: LifeBuoy,  color: "var(--neon-cyan)" },
-  { label: "Today's Cost",     value: 482.43,  delta: "-8.7%",  prefix: "$",  icon: Gauge,     color: "var(--neon-amber)" },
-  { label: "Money Saved",      value: 1283.19, delta: "+23.4%", prefix: "$",  icon: Sparkles,  color: "var(--neon-green)" },
-  { label: "Blocked Requests", value: 134,     delta: "+18.2%", suffix: "",   icon: ShieldAlert, color: "var(--neon-pink)" },
-  { label: "Avg Latency",      value: 412,     delta: "-4.2%",  suffix: "ms", icon: Zap,       color: "var(--neon-cyan)" },
-  { label: "Avg Tokens",       value: 728,     delta: "+1.4%",  suffix: "",   icon: Brain,     color: "var(--neon-violet)" },
-  { label: "Active Models",    value: 9,       delta: "+1",     suffix: "",   icon: Cpu,       color: "var(--neon-pink)" },
-  { label: "Recovery Rate",    value: 94.7,    delta: "+2.1%",  suffix: "%",  icon: LifeBuoy,  color: "var(--neon-green)" },
-  { label: "Gateway Health",   value: 99.2,    delta: "+0.3%",  suffix: "%",  icon: Network,   color: "var(--neon-violet)" },
+  { label: "Total Requests",   value: 0, delta: "No data", suffix: "", icon: Activity, color: "var(--neon-violet)" },
+  { label: "Successful",       value: 0, delta: "No data", suffix: "", icon: Sparkles, color: "var(--neon-green)" },
+  { label: "Failed",           value: 0, delta: "No data", suffix: "", icon: AlertTriangle, color: "var(--neon-red)" },
+  { label: "Recovered",        value: 0, delta: "No data", suffix: "", icon: LifeBuoy, color: "var(--neon-cyan)" },
+  { label: "Today's Cost",     value: 0, delta: "No data", prefix: "$", icon: Gauge, color: "var(--neon-amber)" },
+  { label: "Money Saved",      value: 0, delta: "No data", prefix: "$", icon: Sparkles, color: "var(--neon-green)" },
+  { label: "Blocked Requests", value: 0, delta: "No data", suffix: "", icon: ShieldAlert, color: "var(--neon-pink)" },
+  { label: "Avg Latency",      value: 0, delta: "No data", suffix: "ms", icon: Zap, color: "var(--neon-cyan)" },
+  { label: "Avg Tokens",       value: 0, delta: "No data", suffix: "", icon: Brain, color: "var(--neon-violet)" },
+  { label: "Active Models",    value: 0, delta: "No data", suffix: "", icon: Cpu, color: "var(--neon-pink)" },
+  { label: "Recovery Rate",    value: 0, delta: "No data", suffix: "%", icon: LifeBuoy, color: "var(--neon-green)" },
+  { label: "Gateway Health",   value: 0, delta: "No data", suffix: "%", icon: Network, color: "var(--neon-violet)" },
 ];
+
+type DashboardMetrics = {
+  totalRequests: number; successful: number; failed: number; recovered: number; totalCost: number;
+  avgLatencyMs: number; avgTokens: number; blockedRequests: number; activeModels: number; recoveryRate: number; gatewayHealth: number;
+};
 
 const WORKFLOW_NODES = [
   { id: "app",    label: "Application",  sub: "Client SDK",   icon: TerminalSquare, color: "var(--neon-cyan)" },
@@ -128,14 +90,7 @@ const WORKFLOW_NODES = [
   { id: "resp",   label: "Response",     sub: "Streamed",     icon: Sparkles,       color: "var(--neon-pink)" },
 ];
 
-const TIMELINE = [
-  { t: "10:51:24", kind: "security", text: "Prompt injection blocked on Medical Assistant", tag: "Security" },
-  { t: "10:51:22", kind: "route",    text: "Routed Coding Agent → Gemini 1.5 (cost optimal)", tag: "Routing" },
-  { t: "10:51:19", kind: "heal",     text: "Recovered Research Bot after GPT-4o timeout",     tag: "Recovery" },
-  { t: "10:51:17", kind: "switch",   text: "Provider switch: Claude 3.5 → GPT-4o (latency)",   tag: "Provider" },
-  { t: "10:51:14", kind: "cost",     text: "Project Travel Planner crossed 60% of daily budget", tag: "Cost" },
-  { t: "10:51:09", kind: "notify",   text: "New API key issued for workspace Acme/Prod",        tag: "System" },
-];
+const TIMELINE: { t: string; kind: string; text: string; tag: string }[] = [];
 
 /* ---------------- Helpers ---------------- */
 
@@ -185,7 +140,7 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");
   const area = `0,${h} ${pts} ${w},${h}`;
-  const id = useMemo(() => `g${Math.random().toString(36).slice(2, 8)}`, []);
+  const id = useMemo(() => `spark-${color.replace(/[^a-z0-9]/gi, '') || 'default'}`, [color]);
   return (
     <svg width={w} height={h} className="overflow-visible">
       <defs>
@@ -203,10 +158,10 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
 
 function KpiCard({ k, idx }: { k: typeof KPIS[number]; idx: number }) {
   const val = useAnimatedCounter(k.value, 900 + idx * 30);
-  const spark = useMemo(
-    () => Array.from({ length: 22 }, () => Math.random() * 100),
-    [],
-  );
+  const spark = useMemo(() => {
+    const base = Number(k.value) || 0;
+    return Array.from({ length: 22 }, (_, i) => base === 0 ? 0 : Math.max(0, base * (0.85 + ((i % 7) / 100))));
+  }, [k.value]);
   const Icon = k.icon;
   const positive = k.delta.trim().startsWith("+");
   return (
@@ -304,10 +259,10 @@ function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCollapsed
       <div className="mt-3 border-t border-white/5 pt-3">
         {!collapsed ? (
           <div className="flex items-center gap-3 rounded-lg bg-white/[0.03] p-2">
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-[var(--gradient-pink-violet)] font-display text-sm font-semibold text-[oklch(0.16_0.04_270)]">JC</div>
+            <div className="grid h-9 w-9 place-items-center rounded-full bg-[var(--gradient-pink-violet)] font-display text-sm font-semibold text-[oklch(0.16_0.04_270)]">--</div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium">Jane Cooper</div>
-              <div className="truncate text-[11px] text-muted-foreground">Platform Admin</div>
+              <div className="truncate text-sm font-medium">No user session</div>
+              <div className="truncate text-[11px] text-muted-foreground">Connect authentication</div>
             </div>
             <button
               aria-label="Collapse sidebar"
@@ -349,13 +304,13 @@ function TopBar() {
       </div>
       <div className="hidden items-center gap-2 lg:flex">
         <button className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground">
-          <Globe2 className="h-3.5 w-3.5 text-[var(--neon-cyan)]" /> Acme / Production
+          <Globe2 className="h-3.5 w-3.5 text-[var(--neon-cyan)]" /> ORCHESTRA / Demo
           <ChevronRight className="h-3 w-3 rotate-90" />
         </button>
         <div className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs">
           <Wifi className="h-3.5 w-3.5 text-[var(--neon-green)] animate-glow-pulse" />
           <span className="text-muted-foreground">Connected</span>
-          <span className="font-mono text-[var(--neon-green)]">42ms</span>
+          <span className="font-mono text-[var(--neon-green)]">—</span>
         </div>
         <div className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs">
           <span className="relative inline-flex h-2 w-2">
@@ -363,7 +318,7 @@ function TopBar() {
             <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--neon-green)]" />
           </span>
           <span className="text-muted-foreground">System</span>
-          <span className="text-[var(--neon-green)]">98.6%</span>
+          <span className="text-[var(--neon-green)]">—</span>
         </div>
       </div>
       <button className="relative grid h-9 w-9 place-items-center rounded-lg bg-white/5 hover:bg-white/10" aria-label="Notifications">
@@ -402,7 +357,7 @@ function Hero() {
           </div>
           <h1 className="mt-3 font-display text-3xl font-semibold leading-tight tracking-tight md:text-5xl">
             <span className="text-gradient">ORCHESTRA AI</span>
-            <span className="ml-3 text-foreground/70 text-base font-normal md:text-lg">/ Acme · Production</span>
+            <span className="ml-3 text-foreground/70 text-base font-normal md:text-lg">/ ORCHESTRA · Demo</span>
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground md:text-base">
             Welcome back, Jane. Your AI ecosystem processed <span className="font-mono text-foreground">24,786</span> requests today,
@@ -426,10 +381,10 @@ function Hero() {
       {/* Mission badges */}
       <StaggerGroup className="relative mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
-          { label: "AI Health",       value: "98.6%", color: "var(--neon-green)" },
-          { label: "Active Models",   value: "9",     color: "var(--neon-violet)" },
-          { label: "Live Requests",   value: "1,284", color: "var(--neon-cyan)" },
-          { label: "Threat Level",    value: "Low",   color: "var(--neon-amber)" },
+          { label: "AI Health",       value: "—", color: "var(--neon-green)" },
+          { label: "Active Models",   value: "0", color: "var(--neon-violet)" },
+          { label: "Live Requests",   value: "0", color: "var(--neon-cyan)" },
+          { label: "Threat Level",    value: "—", color: "var(--neon-amber)" },
         ].map((b) => (
           <StaggerItem key={b.label} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 backdrop-blur">
             <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{b.label}</div>
@@ -651,18 +606,12 @@ function WorkflowGraph() {
 function LiveRequests() {
   const [requests, setRequests] = useState(REQUEST_SEED);
   useEffect(() => {
+    if (requests.length === 0) return;
     const id = setInterval(() => {
-      setRequests((prev) => {
-        const r = { ...prev[Math.floor(Math.random() * prev.length)] };
-        const d = new Date();
-        r.time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
-        r.latency = 200 + Math.floor(Math.random() * 900);
-        r.cost = +(Math.random() * 0.03).toFixed(3);
-        return [r, ...prev].slice(0, 7);
-      });
-    }, 2500);
+      setRequests((prev) => prev.length ? prev.map((item, index) => index === 0 ? { ...item, time: new Date().toLocaleTimeString() } : item) : prev);
+    }, 5000);
     return () => clearInterval(id);
-  }, []);
+  }, [requests.length]);
 
   return (
     <div className="glass-card flex h-full flex-col p-4 md:p-5">
@@ -678,7 +627,7 @@ function LiveRequests() {
           <h3 className="font-display text-base font-semibold">Live AI Requests</h3>
         </div>
         <select className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-xs text-muted-foreground focus:outline-none">
-          <option>All Projects</option><option>Travel Planner</option><option>Coding Agent</option>
+          <option>All Projects</option>
         </select>
       </div>
       <ul className="flex-1 space-y-2 overflow-y-auto pr-1">
@@ -737,10 +686,10 @@ function SystemHealth() {
             <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90">
               <circle cx="32" cy="32" r="26" stroke="oklch(1 0 0 / 0.08)" strokeWidth="6" fill="none" />
               <circle cx="32" cy="32" r="26" stroke="var(--neon-green)" strokeWidth="6" fill="none"
-                      strokeLinecap="round" strokeDasharray={`${(98.6 / 100) * 163.36} 163.36`}
+                      strokeLinecap="round" strokeDasharray="0 163.36"
                       style={{ filter: "drop-shadow(0 0 6px var(--neon-green))" }} />
             </svg>
-            <div className="absolute inset-0 grid place-items-center font-display text-sm font-semibold text-[var(--neon-green)]">98.6%</div>
+            <div className="absolute inset-0 grid place-items-center font-display text-sm font-semibold text-[var(--neon-green)]">—</div>
           </div>
         </div>
       </div>
@@ -863,10 +812,7 @@ function SecurityCenter() {
 }
 
 function SelfHealing() {
-  const data = Array.from({ length: 24 }, (_, i) => ({
-    t: i, recovered: 30 + Math.sin(i / 2) * 12 + Math.random() * 8,
-    failed: 4 + Math.random() * 4,
-  }));
+  const data: { t: number; recovered: number; failed: number }[] = [];
   return (
     <div className="glass-card p-4 md:p-5">
       <div className="mb-3 flex items-center justify-between">
@@ -877,15 +823,15 @@ function SelfHealing() {
           <h3 className="font-display text-base font-semibold">Recovery Engine</h3>
         </div>
         <div className="text-right">
-          <div className="font-display text-2xl font-semibold text-[var(--neon-green)]">94.7%</div>
+          <div className="font-display text-2xl font-semibold text-[var(--neon-green)]">—</div>
           <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Recovery Rate</div>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-2 text-center">
         {[
-          { l: "Recovered", v: "89",  c: "var(--neon-green)" },
-          { l: "Retries",   v: "142", c: "var(--neon-cyan)" },
-          { l: "Failed",    v: "8",   c: "var(--neon-red)" },
+          { l: "Recovered", v: "0", c: "var(--neon-green)" },
+          { l: "Retries",   v: "0", c: "var(--neon-cyan)" },
+          { l: "Failed",    v: "0", c: "var(--neon-red)" },
         ].map((s) => (
           <div key={s.l} className="rounded-lg border border-white/5 bg-white/[0.02] px-2 py-2">
             <div className="font-display text-lg font-semibold" style={{ color: s.c }}>{s.v}</div>
@@ -1025,15 +971,13 @@ function Footer() {
   return (
     <footer className="glass-panel mt-4 flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 text-[11px] text-muted-foreground">
       <div className="flex items-center gap-3">
-        <span className="font-mono">v3.14.2</span>
+        <span className="font-mono">Demo build</span>
         <span>·</span>
-        <span>5 providers connected</span>
-        <span>·</span>
-        <span>Last sync <span className="font-mono text-foreground/80">12s ago</span></span>
+        <span>Telemetry from the active demo session</span>
       </div>
       <div className="flex items-center gap-2">
         <span className="rounded-md bg-[oklch(0.85_0.21_155/0.12)] px-1.5 py-0.5 text-[var(--neon-green)]">API · Operational</span>
-        <span className="rounded-md bg-white/5 px-1.5 py-0.5 uppercase tracking-wider">Production</span>
+        <span className="rounded-md bg-white/5 px-1.5 py-0.5 uppercase tracking-wider">Demo</span>
       </div>
     </footer>
   );
@@ -1044,13 +988,28 @@ function Footer() {
 import { AppShell } from "@/components/app-shell";
 
 function Dashboard() {
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  useEffect(() => {
+    let active = true;
+    fetch('/api/metrics', { cache: 'no-store' }).then((r) => r.ok ? r.json() : null).then((data) => { if (active && data) setMetrics(data as DashboardMetrics); }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+  const dashboardKpis = KPIS.map((k) => {
+    if (!metrics) return k;
+    const values: Record<string, number> = {
+      'Total Requests': metrics.totalRequests, 'Successful': metrics.successful, 'Failed': metrics.failed, 'Recovered': metrics.recovered,
+      "Today's Cost": metrics.totalCost, 'Money Saved': 0, 'Blocked Requests': metrics.blockedRequests, 'Avg Latency': metrics.avgLatencyMs,
+      'Avg Tokens': metrics.avgTokens, 'Active Models': metrics.activeModels, 'Recovery Rate': metrics.recoveryRate, 'Gateway Health': metrics.gatewayHealth,
+    };
+    return { ...k, value: values[k.label] ?? 0, delta: metrics.totalRequests ? 'Live' : 'No data' };
+  });
   return (
     <AppShell>
       <Hero />
 
       {/* KPI grid */}
       <section aria-label="Key metrics" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-        {KPIS.map((k, i) => <KpiCard key={k.label} k={k} idx={i} />)}
+        {dashboardKpis.map((k, i) => <KpiCard key={k.label} k={k} idx={i} />)}
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">

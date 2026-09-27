@@ -8,7 +8,7 @@ import { CostStage } from '../pipeline/stages/cost.stage.js';
 import { RoutingStage } from '../pipeline/stages/routing.stage.js';
 import { ProviderStage } from '../pipeline/stages/provider.stage.js';
 import { ResponseStage } from '../pipeline/stages/response.stage.js';
-import { ObservabilityStage } from '../pipeline/stages/observability.stage.js';
+import { ObservabilityStage, recordRequestEvent } from '../pipeline/stages/observability.stage.js';
 import { ProviderManager } from '../providers/provider-manager.js';
 import { ProviderRegistry } from '../providers/provider-registry.js';
 import { ExecutionEngine } from '../execution/execution-engine.js';
@@ -25,11 +25,13 @@ export interface GatewayServiceOptions {
 export class GatewayService {
   private readonly eventBus: Pick<EventBus, 'emit'>;
   private readonly pipelineOrchestrator: PipelineOrchestrator;
+  private readonly providerManagerForGateway: ProviderManager;
   private readonly executionEngine: ExecutionEngine;
   private readonly responseHandler: ResponseHandler;
 
   constructor(options: GatewayServiceOptions = {}) {
     const manager = options.providerManager ?? new ProviderManager();
+    this.providerManagerForGateway = manager;
     const registry = new ProviderRegistry(manager);
     registry.registerDefaults();
 
@@ -47,6 +49,10 @@ export class GatewayService {
     this.responseHandler = new ResponseHandler();
   }
 
+  getProviderManager(): ProviderManager {
+    return this.providerManagerForGateway;
+  }
+
   async execute(input: GatewayRequestInput): Promise<GatewayResponse> {
     const requestId = randomUUID();
     const correlationId = randomUUID();
@@ -59,9 +65,20 @@ export class GatewayService {
       userId: input.userId,
       organizationId: input.organizationId,
       projectId: input.projectId,
+      endpoint: input.endpoint,
       apiKey: input.apiKey,
       provider: input.provider,
       model: input.model,
+      temperature: input.temperature,
+      topP: input.topP,
+      topK: input.topK,
+      maxTokens: input.maxTokens,
+      stop: input.stop,
+      frequencyPenalty: input.frequencyPenalty,
+      presencePenalty: input.presencePenalty,
+      responseFormat: input.responseFormat,
+      tools: input.tools,
+      toolChoice: input.toolChoice,
       streaming: input.streaming ?? false,
       retryCount: 0,
       maxRetries: 3,
@@ -70,6 +87,7 @@ export class GatewayService {
       messages: input.messages,
       metadata: input.metadata ?? {},
       customMetadata: {},
+      onStreamChunk: input.onStreamChunk,
       headers: {},
       ipAddress: '127.0.0.1',
       userAgent: 'orchestra-test',
@@ -91,7 +109,22 @@ export class GatewayService {
     const streamingEngine = new StreamingEngine();
     await streamingEngine.prepareStream(context);
 
-    const executedContext = await retryEngine.execute(async () => this.executionEngine.startExecution(context));
+    let executedContext: ExecutionContext;
+    try {
+      executedContext = await retryEngine.execute(async () => this.executionEngine.startExecution(context));
+    } catch (error) {
+      context.error ??= {
+        code: 'GATEWAY_ERROR',
+        message: error instanceof Error ? error.message : String(error),
+        retryable: false,
+        statusCode: 500,
+        timestamp: new Date().toISOString(),
+        stage: context.currentStage,
+      };
+      context.executionDurationMs = Date.now() - startedAt;
+      await recordRequestEvent(context);
+      throw error;
+    }
     const latencyMs = Date.now() - startedAt;
     const response = this.responseHandler.normalize(
       {

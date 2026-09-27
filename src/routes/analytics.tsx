@@ -19,19 +19,15 @@ const RANGES = { "7d": 7, "30d": 30, "90d": 90 } as const;
 type RangeKey = keyof typeof RANGES;
 
 function build(n: number) {
-  return Array.from({ length: n }, (_, i) => ({
-    d: i + 1,
-    requests: 12000 + Math.sin(i / 4) * 4000 + Math.random() * 2000 + i * 200,
-    users:    420 + Math.sin(i / 5) * 80 + i * 6,
-    quality:  88 + Math.sin(i / 3) * 4 + Math.random() * 2,
-  }));
+  void n;
+  return [] as { d: number; requests: number; users: number; quality: number }[];
 }
 
 function AnalyticsPage() {
   const [range, setRange] = useState<RangeKey>("30d");
   const data = useMemo(() => build(RANGES[range]), [range]);
   const totalReqs = useMemo(() => Math.round(data.reduce((s, d) => s + d.requests, 0)), [data]);
-  const avgQuality = useMemo(() => (data.reduce((s, d) => s + d.quality, 0) / data.length).toFixed(1), [data]);
+  const avgQuality = useMemo(() => (data.length ? data.reduce((s, d) => s + d.quality, 0) / data.length : 0).toFixed(1), [data]);
 
   const exportCsv = () => {
     const csv = ["day,requests,users,quality", ...data.map((d) => `${d.d},${Math.round(d.requests)},${Math.round(d.users)},${d.quality.toFixed(2)}`)].join("\n");
@@ -64,10 +60,10 @@ function AnalyticsPage() {
       />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label={`Requests (${range})`} value={fmt(totalReqs)} delta="+18%" color="var(--neon-cyan)"   icon={LineIcon} />
-        <StatCard label="MAU"                   value="2,841" delta="+12%" color="var(--neon-violet)" icon={Users} />
-        <StatCard label="Quality Score"         value={`${avgQuality}/100`} delta="+0.4" color="var(--neon-green)" icon={Sparkles} />
-        <StatCard label="Growth"                value="+24%" delta="MoM"  color="var(--neon-pink)"   icon={TrendingUp} />
+        <StatCard label={`Requests (${range})`} value={fmt(totalReqs)} delta="—" color="var(--neon-cyan)"   icon={LineIcon} />
+        <StatCard label="MAU"                   value="—" delta="No data" color="var(--neon-violet)" icon={Users} />
+        <StatCard label="Quality Score"         value={`${avgQuality}/100`} delta="No data" color="var(--neon-green)" icon={Sparkles} />
+        <StatCard label="Growth"                value="—" delta="No data" color="var(--neon-pink)"   icon={TrendingUp} />
       </section>
 
       <Panel eyebrow="Volume" title="Daily Requests">

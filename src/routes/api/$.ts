@@ -12,6 +12,14 @@ const createKeySchema = z.object({
   scopes: z.array(z.enum(["read", "write", "admin"])).min(1).default(["read"]),
 });
 
+const demoEventSchema = z.object({
+  model: z.string().max(120).optional(),
+  latencyMs: z.number().nonnegative().max(120000).optional(),
+  costUsd: z.number().nonnegative().max(100).optional(),
+  inputTokens: z.number().int().nonnegative().max(100000).optional(),
+  outputTokens: z.number().int().nonnegative().max(100000).optional(),
+});
+
 function genPrefix() {
   return "orch_live_" + Math.random().toString(36).slice(2, 6);
 }
@@ -34,6 +42,13 @@ export const Route = createFileRoute("/api/$")({
       },
       POST: async ({ request }) => {
         const pathname = new URL(request.url).pathname;
+        if (pathname === "/api/demo-event") {
+          const body = await request.json().catch(() => null);
+          const parsed = demoEventSchema.safeParse(body);
+          if (!parsed.success) return json({ error: "Invalid input" }, 400);
+          const { recordDemoEvent } = await import("@/lib/api-store.server");
+          return json(recordDemoEvent(parsed.data));
+        }
         if (pathname !== "/api/keys") return json({ error: "Not found" }, 404);
 
         const { getStore, newId } = await import("@/lib/api-store.server");

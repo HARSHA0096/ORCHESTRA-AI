@@ -12,6 +12,7 @@ export class ResponseHandler {
         model: providerResponse?.model ?? context.model ?? 'unknown',
         finishReason: providerResponse?.finishReason ?? 'stop',
         usage: providerResponse?.usage ?? { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        providerRequestId: providerResponse?.providerRequestId,
         toolCalls: providerResponse?.toolCalls,
         latencyMs: context.executionDurationMs,
         executionTimeMs: context.executionDurationMs,

@@ -1,6 +1,7 @@
 import { BasePipelineStage } from '../pipeline-stage.interface.js';
 import type { ExecutionContext } from '../../shared/types.js';
 import { logger } from '@orchestra/logger';
+import { config } from '@orchestra/config';
 
 const log = logger.child({ module: 'stage:routing' });
 
@@ -19,8 +20,10 @@ export class RoutingStage extends BasePipelineStage {
     log.debug({ requestId: context.requestId, provider: context.provider, model: context.model }, 'Routing (placeholder)');
 
     // Default: pass-through — use whatever the client specified
-    context.resolvedProvider = context.provider ?? 'openai';
-    context.resolvedModel = context.model ?? 'gpt-4o';
+    const requestedModel = context.model ?? 'orchestra-demo-model';
+    const demoRequested = requestedModel.startsWith('orchestra-demo') || requestedModel === 'orchestra-fast-demo' || requestedModel === 'orchestra-reasoning-demo';
+    context.resolvedProvider = demoRequested || (!context.provider && config.demo?.enabled) ? 'demo' : (context.provider ?? 'openai');
+    context.resolvedModel = requestedModel;
 
     // Future: intelligent routing
     // Future: load balancing

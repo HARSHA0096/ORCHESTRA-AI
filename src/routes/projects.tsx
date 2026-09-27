@@ -26,14 +26,7 @@ type Project = {
   archived?: boolean;
 };
 
-const SEED: Project[] = [
-  { id: "p1", name: "Acme Production",  env: "prod",    models: 6, reqs: "1.28M", spend: "$8,412", status: "healthy",  color: "var(--neon-green)" },
-  { id: "p2", name: "Acme Staging",     env: "staging", models: 4, reqs: "284K",  spend: "$612",   status: "healthy",  color: "var(--neon-cyan)" },
-  { id: "p3", name: "Compliance Vault", env: "prod",    models: 3, reqs: "92K",   spend: "$1,840", status: "guarded",  color: "var(--neon-violet)" },
-  { id: "p4", name: "Atlas Copilot",    env: "prod",    models: 5, reqs: "612K",  spend: "$3,201", status: "healthy",  color: "var(--neon-pink)" },
-  { id: "p5", name: "Voyager R&D",      env: "dev",     models: 8, reqs: "44K",   spend: "$182",   status: "degraded", color: "var(--neon-amber)" },
-  { id: "p6", name: "Helios Analytics", env: "prod",    models: 4, reqs: "208K",  spend: "$1,022", status: "healthy",  color: "var(--neon-green)" },
-];
+const SEED: Project[] = [];
 
 const STORAGE = "orchestra.projects";
 const ENV_COLORS: Record<Project["env"], string> = {
@@ -114,7 +107,7 @@ function ProjectsPage() {
   return (
     <AppShell>
       <PageHero
-        eyebrow="Workspace · Acme"
+        eyebrow="Workspace · ORCHESTRA Demo"
         title="Projects"
         subtitle="Provision, monitor and govern every AI workload across environments. Each project carries its own routing strategy, security posture and cost budget."
         accent="var(--neon-violet)"
@@ -122,10 +115,10 @@ function ProjectsPage() {
       />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Active Projects" value={String(active)} delta="+2" color="var(--neon-violet)" icon={Boxes} />
-        <StatCard label="Deployments (24h)" value="38" delta="+9" color="var(--neon-cyan)" icon={Rocket} />
-        <StatCard label="Branches Tracked" value="46" delta="+4" color="var(--neon-pink)" icon={GitBranch} />
-        <StatCard label="Team Members" value="84" delta="+3" color="var(--neon-green)" icon={Users} />
+        <StatCard label="Active Projects" value={String(active)} delta="Current" color="var(--neon-violet)" icon={Boxes} />
+        <StatCard label="Deployments (24h)" value="0" delta="No data" color="var(--neon-cyan)" icon={Rocket} />
+        <StatCard label="Branches Tracked" value="0" delta="No data" color="var(--neon-pink)" icon={GitBranch} />
+        <StatCard label="Team Members" value="0" delta="No data" color="var(--neon-green)" icon={Users} />
       </section>
 
       <Panel

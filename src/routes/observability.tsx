@@ -16,25 +16,14 @@ export const Route = createFileRoute("/observability")({
 
 type Log = { ts: string; lvl: "info" | "warn" | "error"; msg: string };
 
-const SAMPLE_MSGS: Log[] = [
-  { ts: "", lvl: "info",  msg: "req=8a3 model=gpt-4o tokens=1240 latency=412ms" },
-  { ts: "", lvl: "warn",  msg: "fallback claude-3.5 (openai 5xx)" },
-  { ts: "", lvl: "info",  msg: "cache hit prompt_hash=4f1c" },
-  { ts: "", lvl: "error", msg: "rate_limit provider=openai retry_in=820ms" },
-  { ts: "", lvl: "info",  msg: "trace span=embed dur=88ms" },
-  { ts: "", lvl: "warn",  msg: "context_length=31k approaching window" },
-];
+const SAMPLE_MSGS: Log[] = [];
 
 const RANGES = { "5m": 30, "1h": 60, "24h": 96 } as const;
 type RangeKey = keyof typeof RANGES;
 
 function buildLatency(n: number) {
-  return Array.from({ length: n }, (_, i) => ({
-    t: i,
-    p50: 220 + Math.sin(i / 2) * 30 + Math.random() * 20,
-    p95: 420 + Math.sin(i / 2 + 1) * 60 + Math.random() * 40,
-    p99: 620 + Math.sin(i / 2 + 2) * 90 + Math.random() * 60,
-  }));
+  void n;
+  return [] as { t: number; p50: number; p95: number; p99: number }[];
 }
 
 const lvlColor = (lvl: string) => lvl === "error" ? "var(--neon-red)" : lvl === "warn" ? "var(--neon-amber)" : "var(--neon-cyan)";
@@ -51,8 +40,9 @@ function ObsPage() {
   useEffect(() => {
     if (paused) return;
     const i = window.setInterval(() => {
-      const seed = SAMPLE_MSGS[idx.current++ % SAMPLE_MSGS.length];
-      setLogs((s) => [{ ...seed, ts: stamp(0) }, ...s].slice(0, 80));
+      if (SAMPLE_MSGS.length === 0) return;
+      const entry = SAMPLE_MSGS[idx.current++ % SAMPLE_MSGS.length];
+      setLogs((s) => [{ ...entry, ts: stamp(0) }, ...s].slice(0, 80));
     }, 1600);
     return () => window.clearInterval(i);
   }, [paused]);
@@ -77,10 +67,10 @@ function ObsPage() {
       />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Spans / sec"   value="8,412" delta="+12%"  color="var(--neon-cyan)"   icon={Radar} />
-        <StatCard label="P95 Latency"   value="412ms" delta="-32ms" color="var(--neon-green)"  icon={Activity} />
-        <StatCard label="Active Traces" value="284"   delta="+18"   color="var(--neon-violet)" icon={Eye} />
-        <StatCard label="Logs / min"    value="12.4k" delta="+4%"   color="var(--neon-pink)"   icon={TerminalSquare} />
+        <StatCard label="Spans / sec"   value="0" delta="No data"  color="var(--neon-cyan)"   icon={Radar} />
+        <StatCard label="P95 Latency"   value="—" delta="No data" color="var(--neon-green)"  icon={Activity} />
+        <StatCard label="Active Traces" value="0"   delta="No data"   color="var(--neon-violet)" icon={Eye} />
+        <StatCard label="Logs / min"    value="0" delta="No data"   color="var(--neon-pink)"   icon={TerminalSquare} />
       </section>
 
       <Panel eyebrow="Latency" title={`P50 · P95 · P99 (ms) — ${range}`}>

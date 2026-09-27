@@ -1,4 +1,4 @@
-import { prisma, type Prisma } from '@orchestra/database';
+import { prisma } from '@orchestra/database';
 
 export class OrganizationsRepository {
   async findById(id: string) {
@@ -17,11 +17,11 @@ export class OrganizationsRepository {
     });
   }
 
-  async create(data: Prisma.OrganizationCreateInput) {
+  async create(data: Record<string, unknown>) {
     return prisma.organization.create({ data });
   }
 
-  async update(id: string, data: Prisma.OrganizationUpdateInput) {
+  async update(id: string, data: Record<string, unknown>) {
     return prisma.organization.update({ where: { id }, data });
   }
 

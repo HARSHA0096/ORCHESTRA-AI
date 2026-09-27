@@ -28,6 +28,11 @@ export const envSchema = z.object({
 
   // API Keys
   API_KEY_SALT: z.string().min(16).default('change-this-salt-min-16-chars'),
+  OPENAI_API_KEY: z.string().optional(),
+  ANTHROPIC_API_KEY: z.string().optional(),
+  DEVELOPMENT_PROJECT_ID: z.string().uuid().optional(),
+  DEMO_MODE: z.coerce.boolean().default(false),
+  DEMO_PROJECT_ID: z.string().uuid().optional(),
 
   // CORS
   CORS_ORIGINS: z.string().default('http://localhost:3000,http://localhost:5173'),

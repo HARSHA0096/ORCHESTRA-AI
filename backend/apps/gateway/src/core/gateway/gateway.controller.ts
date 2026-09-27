@@ -14,19 +14,40 @@ export function createGatewayController(service: GatewayService) {
         requestType?: string;
         streaming?: boolean;
         metadata?: Record<string, unknown>;
+        messages?: import('../shared/types.js').ChatMessage[];
+        temperature?: number;
+        topP?: number;
+        maxTokens?: number;
+        stop?: string[];
+        frequencyPenalty?: number;
+        presencePenalty?: number;
+        responseFormat?: 'text' | 'json';
+        tools?: import('../shared/types.js').ToolDefinition[];
+        toolChoice?: unknown;
       };
 
       const result = await service.execute({
         prompt: body.prompt ?? '',
+        messages: body.messages,
         provider: body.provider,
         model: body.model,
         userId: request.user?.sub,
         organizationId: request.requestContext?.organizationId,
         projectId: body.projectId,
+        endpoint: request.routeOptions.url ?? request.url,
         apiKey: request.headers['x-api-key'] as string | undefined,
         requestType: body.requestType as RequestType | undefined,
         streaming: body.streaming ?? false,
         metadata: body.metadata,
+        temperature: body.temperature,
+        topP: body.topP,
+        maxTokens: body.maxTokens,
+        stop: body.stop,
+        frequencyPenalty: body.frequencyPenalty,
+        presencePenalty: body.presencePenalty,
+        responseFormat: body.responseFormat,
+        tools: body.tools,
+        toolChoice: body.toolChoice,
       });
 
       const response: ApiResponse<typeof result.data> = {

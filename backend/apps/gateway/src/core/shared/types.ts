@@ -69,15 +69,18 @@ export interface GatewayRequestInput {
   streaming?: boolean;
   responseFormat?: 'text' | 'json';
   tools?: ToolDefinition[];
+  toolChoice?: unknown;
 
   // Context
   userId?: string;
   organizationId?: string;
   projectId?: string;
+  endpoint?: string;
   apiKey?: string;
 
   // Metadata
   metadata?: Record<string, unknown>;
+  onStreamChunk?: (chunk: StreamChunk) => void;
 }
 
 export interface ToolDefinition {
@@ -118,6 +121,7 @@ export interface ExecutionContext {
   userId?: string;
   organizationId?: string;
   projectId?: string;
+  endpoint?: string;
   apiKey?: string;
 
   // Request
@@ -144,6 +148,7 @@ export interface ExecutionContext {
   streaming: boolean;
   responseFormat?: 'text' | 'json';
   tools?: ToolDefinition[];
+  toolChoice?: unknown;
 
   // Lifecycle
   status: ExecutionStatus;
@@ -170,6 +175,7 @@ export interface ExecutionContext {
   promptMetadata?: PromptMetadata;
   metadata: Record<string, unknown>;
   customMetadata: Record<string, unknown>;
+  onStreamChunk?: (chunk: StreamChunk) => void;
 }
 
 // ── Execution Error ────────────────────────────────────────
@@ -223,6 +229,7 @@ export interface ProviderResponse {
   finishReason: 'stop' | 'length' | 'content_filter' | 'tool_calls' | 'error';
   usage: TokenUsage;
   latencyMs: number;
+  providerRequestId?: string;
   toolCalls?: ToolCall[];
   metadata?: Record<string, unknown>;
 }
@@ -261,6 +268,7 @@ export interface GatewayResponse {
     model: string;
     finishReason: string;
     usage: TokenUsage;
+    providerRequestId?: string;
     toolCalls?: ToolCall[];
     latencyMs: number;
     executionTimeMs: number;

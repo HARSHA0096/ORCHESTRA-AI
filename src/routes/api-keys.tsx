@@ -24,13 +24,7 @@ type ApiKey = {
   status: "active" | "revoked";
 };
 
-const INITIAL: ApiKey[] = [
-  { id: "1", name: "prod-gateway",    key: "sk_live_8a3f9c1e2d04b7c6", scope: "all",        req: "1.2M", budget: "$8,412", status: "active" },
-  { id: "2", name: "staging-tests",   key: "sk_test_4f1c0e9a73b25dab", scope: "chat,embed", req: "284k", budget: "$612",   status: "active" },
-  { id: "3", name: "atlas-copilot",   key: "sk_live_1c2d3e4f5a6b7c8d", scope: "chat",       req: "612k", budget: "$3,201", status: "active" },
-  { id: "4", name: "compliance-vault",key: "sk_live_aa11bb22cc33dd44", scope: "audit",      req: "92k",  budget: "$1,840", status: "active" },
-  { id: "5", name: "edge-cron",       key: "sk_live_99887766554433aa", scope: "embed",      req: "44k",  budget: "$180",   status: "active" },
-];
+const INITIAL: ApiKey[] = [];
 
 const randomKey = () => {
   const hex = Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
@@ -97,9 +91,9 @@ function ApiKeysPage() {
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Active Keys"   value={String(activeCount)} color="var(--neon-violet)" icon={KeyRound} />
-        <StatCard label="Revoked (30d)" value="6"    color="var(--neon-red)" />
-        <StatCard label="Avg Spend/Key" value="$184" delta="-12%" color="var(--neon-green)" />
-        <StatCard label="Rate-Limited"  value="2"    color="var(--neon-amber)" />
+        <StatCard label="Revoked (30d)" value="0" delta="No data" color="var(--neon-red)" />
+        <StatCard label="Avg Spend/Key" value="—" delta="Deferred" color="var(--neon-green)" />
+        <StatCard label="Rate-Limited" value="0" delta="No data" color="var(--neon-amber)" />
       </section>
 
       <Panel

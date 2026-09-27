@@ -14,7 +14,7 @@ import { config } from '@orchestra/config';
 import { logger } from '@orchestra/logger';
 import { AppError } from '@orchestra/errors';
 import { redis } from '@orchestra/redis';
-import type { JwtPayload, RequestContext, ApiResponse } from '@orchestra/shared';
+import type { ApiResponse, RequestContext } from '@orchestra/shared';
 
 import { healthPlugin } from './plugins/health.plugin.js';
 import { websocketPlugin } from './plugins/websocket.plugin.js';
@@ -25,26 +25,15 @@ import { apiKeyRoutes } from './domains/api-keys/api-keys.routes.js';
 import { providerRoutes } from './domains/providers/providers.routes.js';
 import { auditRoutes } from './domains/audit/audit.routes.js';
 import { notificationRoutes } from './domains/notifications/notifications.routes.js';
-import { gatewayRoutes } from './core/gateway/gateway.routes.js';
-
-// ──────────────────────────────────────────────
-// Fastify type augmentation
-// ──────────────────────────────────────────────
-declare module 'fastify' {
-  interface FastifyRequest {
-    user: JwtPayload | null;
-    organization: { id: string; role: string } | null;
-    apiKey: { id: string; projectId: string } | null;
-    requestContext: RequestContext;
-  }
-}
+import { gatewayRoutes, openAiCompatibleRoutes } from './core/gateway/gateway.routes.js';
+import { demoObservabilityRoutes } from './core/gateway/demo.routes.js';
 
 // ──────────────────────────────────────────────
 // App factory
 // ──────────────────────────────────────────────
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: logger,
+    loggerInstance: logger,
     requestIdHeader: 'x-request-id',
     genReqId: () => crypto.randomUUID(),
     disableRequestLogging: true, // We handle this ourselves
@@ -377,9 +366,12 @@ export async function buildApp(): Promise<FastifyInstance> {
       await apiRouter.register(gatewayRoutes, { prefix: '/gateway' });
       await apiRouter.register(auditRoutes, { prefix: '/organizations' });
       await apiRouter.register(notificationRoutes, { prefix: '/notifications' });
+      await apiRouter.register(demoObservabilityRoutes, { prefix: '/demo' });
     },
     { prefix: '/api/v1' },
   );
+
+  await app.register(openAiCompatibleRoutes, { prefix: '/v1' });
 
   return app;
 }

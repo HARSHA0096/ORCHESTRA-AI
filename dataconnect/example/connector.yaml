@@ -1,0 +1,87 @@
+connectorId: example
+generate:
+  javascriptSdk:
+    - outputDir: ..\..\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..
+      react: true
+      angular: false
+      clientCache: {}
+    - outputDir: ..\..\backend\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\backend
+      react: false
+      angular: false
+      clientCache: {}
+    - outputDir: ..\..\backend\packages\validation\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\backend\packages\validation
+      react: false
+      angular: false
+      clientCache: {}
+    - outputDir: ..\..\backend\packages\shared\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\backend\packages\shared
+      react: false
+      angular: false
+      clientCache: {}
+    - outputDir: ..\..\backend\packages\redis\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\backend\packages\redis
+      react: false
+      angular: false
+      clientCache: {}
+    - outputDir: ..\..\backend\packages\queue\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\backend\packages\queue
+      react: false
+      angular: false
+      clientCache: {}
+    - outputDir: ..\..\backend\packages\middleware\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\backend\packages\middleware
+      react: false
+      angular: false
+      clientCache: {}
+    - outputDir: ..\..\backend\packages\logger\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\backend\packages\logger
+      react: false
+      angular: false
+      clientCache: {}
+    - outputDir: ..\..\backend\packages\events\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\backend\packages\events
+      react: false
+      angular: false
+      clientCache: {}
+    - outputDir: ..\..\backend\packages\errors\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\backend\packages\errors
+      react: false
+      angular: false
+      clientCache: {}
+    - outputDir: ..\..\backend\packages\database\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\backend\packages\database
+      react: false
+      angular: false
+      clientCache: {}
+    - outputDir: ..\..\backend\packages\config\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\backend\packages\config
+      react: false
+      angular: false
+      clientCache: {}
+    - outputDir: ..\..\backend\packages\auth\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\backend\packages\auth
+      react: false
+      angular: false
+      clientCache: {}
+    - outputDir: ..\..\backend\apps\gateway\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\backend\apps\gateway
+      react: false
+      angular: false
+      clientCache: {}

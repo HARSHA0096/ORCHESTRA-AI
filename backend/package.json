@@ -12,7 +12,7 @@
     "build": "pnpm -r build",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "typecheck": "tsc -b",
+    "typecheck": "pnpm --filter @orchestra/middleware exec tsc -p tsconfig.json --noEmit --rootDir ../../ && pnpm --filter @orchestra/gateway exec tsc -p tsconfig.json --noEmit --rootDir ../../",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -27,13 +27,17 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@vitest/coverage-v8": "^2.1.0",
     "eslint": "^9.15.0",
     "prettier": "^3.4.0",
+    "prisma": "^6.19.3",
     "rimraf": "^6.0.1",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.15.0",
-    "vitest": "^2.1.0",
-    "@vitest/coverage-v8": "^2.1.0"
+    "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3"
   }
 }

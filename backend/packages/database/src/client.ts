@@ -8,7 +8,7 @@ class Database {
   private connected = false;
 
   constructor() {
-    this.client = new PrismaClient({
+    const baseClient = new PrismaClient({
       log: [
         { emit: 'event', level: 'query' },
         { emit: 'event', level: 'error' },
@@ -16,49 +16,51 @@ class Database {
       ],
     });
 
-    this.client.$on('error', (event: { target?: string; message: string }) => {
+    baseClient.$on('error', (event: { target?: string; message: string }) => {
       log.error({ target: event.target }, event.message);
     });
 
-    this.client.$on('warn', (event: { target?: string; message: string }) => {
+    baseClient.$on('warn', (event: { target?: string; message: string }) => {
       log.warn({ target: event.target }, event.message);
     });
 
-    // Soft-delete middleware: auto-filter deleted records on find operations
-    this.client.$use(async (params: any, next: (params: any) => Promise<unknown>) => {
-      const modelsWithSoftDelete = [
-        'User', 'Organization', 'OrgMembership', 'Project', 'ProjectMember',
-        'ApiKey', 'Provider', 'ProviderModel', 'Notification', 'Configuration',
-      ];
+    const modelsWithSoftDelete = new Set([
+      'User', 'Organization', 'OrgMembership', 'Project', 'ProjectMember',
+      'ApiKey', 'Provider', 'ProviderModel', 'Notification', 'RequestEvent',
+      'SecurityEvent', 'RecoveryEvent', 'Budget', 'Configuration',
+    ]);
 
-      if (params.model && modelsWithSoftDelete.includes(params.model)) {
-        if (params.action === 'findMany' || params.action === 'findFirst') {
-          if (!params.args) {
-            params.args = {};
-          }
-          if (!params.args.where) {
-            params.args.where = {};
-          }
-          if (params.args.where['deletedAt'] === undefined) {
-            params.args.where['deletedAt'] = null;
-          }
-        }
-
-        if (params.action === 'findUnique' || params.action === 'findUniqueOrThrow') {
-          params.action = 'findFirst';
-          if (!params.args) {
-            params.args = {};
-          }
-          if (!params.args.where) {
-            params.args.where = {};
-          }
-          if (params.args.where['deletedAt'] === undefined) {
-            params.args.where['deletedAt'] = null;
-          }
-        }
-      }
-
-      return next(params);
+    this.client = baseClient.$extends({
+      query: {
+        $allModels: {
+          async findMany({ model, args, query }: { model: string; args: any; query: (args: any) => Promise<unknown> }) {
+            if (modelsWithSoftDelete.has(model)) {
+              args.where = { ...args.where, deletedAt: args.where?.deletedAt ?? null };
+            }
+            return query(args);
+          },
+          async findFirst({ model, args, query }: { model: string; args: any; query: (args: any) => Promise<unknown> }) {
+            if (modelsWithSoftDelete.has(model)) {
+              args.where = { ...args.where, deletedAt: args.where?.deletedAt ?? null };
+            }
+            return query(args);
+          },
+          async findUnique({ model, args, query }: { model: string; args: any; query: (args: any) => Promise<any> }) {
+            const result = await query(args);
+            if (modelsWithSoftDelete.has(model) && result?.deletedAt !== null) {
+              return null;
+            }
+            return result;
+          },
+          async findUniqueOrThrow({ model, args, query }: { model: string; args: any; query: (args: any) => Promise<any> }) {
+            const result = await query(args);
+            if (modelsWithSoftDelete.has(model) && result?.deletedAt !== null) {
+              throw new Error(`${model} record not found`);
+            }
+            return result;
+          },
+        },
+      },
     });
   }
 

@@ -6,6 +6,7 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "dependencies": {
+    "@dataconnect/generated": "file:src/dataconnect-generated",
     "pino": "^9.5.0",
     "pino-pretty": "^11.3.0"
   }

@@ -1,4 +1,6 @@
-// In-memory demo store. Resets on every deploy / cold start.
+import crypto from "node:crypto";
+
+// Temporary in-memory store for local writes until the backend repository is wired in.
 // Server-only: imported only by route handlers under src/routes/api/*.
 
 export type HistoryItem = {
@@ -39,38 +41,7 @@ export type Metrics = {
   updatedAt: string;
 };
 
-const rid = () => Math.random().toString(36).slice(2, 10);
-
-function seedHistory(): HistoryItem[] {
-  const providers = ["openai", "anthropic", "google", "mistral"];
-  const models = ["gpt-4o", "claude-3.5-sonnet", "gemini-1.5-pro", "mistral-large"];
-  const statuses: HistoryItem["status"][] = ["completed", "completed", "completed", "routed", "recovered", "blocked"];
-  return Array.from({ length: 120 }).map((_, i) => ({
-    id: rid(),
-    timestamp: new Date(Date.now() - i * 60_000 * 7).toISOString(),
-    model: models[i % models.length],
-    provider: providers[i % providers.length],
-    status: statuses[i % statuses.length],
-    latencyMs: 180 + Math.round(Math.random() * 400),
-    costUsd: Number((Math.random() * 0.12).toFixed(4)),
-    prompt: ["Summarize quarterly report", "Generate launch email", "Refactor SQL query", "Classify ticket priority"][i % 4],
-  }));
-}
-
-function seedProjects(): Project[] {
-  return [
-    { id: rid(), name: "Core Platform", slug: "core-platform", environment: "production", createdAt: new Date(Date.now() - 86400000 * 90).toISOString(), requests: 842_103 },
-    { id: rid(), name: "Customer Support AI", slug: "support-ai", environment: "production", createdAt: new Date(Date.now() - 86400000 * 45).toISOString(), requests: 312_409 },
-    { id: rid(), name: "Internal Tools", slug: "internal-tools", environment: "staging", createdAt: new Date(Date.now() - 86400000 * 14).toISOString(), requests: 28_540 },
-  ];
-}
-
-function seedKeys(): ApiKey[] {
-  return [
-    { id: rid(), name: "Production API", prefix: "orch_live_9a2f", scopes: ["read", "write"], createdAt: new Date(Date.now() - 86400000 * 30).toISOString(), lastUsedAt: new Date().toISOString() },
-    { id: rid(), name: "Analytics Reader", prefix: "orch_live_b71e", scopes: ["read"], createdAt: new Date(Date.now() - 86400000 * 10).toISOString(), lastUsedAt: new Date(Date.now() - 3600000).toISOString() },
-  ];
-}
+const rid = () => crypto.randomUUID();
 
 type Store = {
   history: HistoryItem[];
@@ -86,13 +57,37 @@ declare global {
 const store: Store =
   globalThis.__ORCH_STORE__ ??
   (globalThis.__ORCH_STORE__ = {
-    history: seedHistory(),
-    projects: seedProjects(),
-    keys: seedKeys(),
+    history: [],
+    projects: [],
+    keys: [],
   });
 
 export function getStore() {
   return store;
+}
+
+export function recordDemoEvent(input: {
+  model?: string;
+  status?: HistoryItem["status"];
+  latencyMs?: number;
+  costUsd?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+}) {
+  const item: HistoryItem & { inputTokens?: number; outputTokens?: number } = {
+    id: rid(),
+    timestamp: new Date().toISOString(),
+    model: input.model ?? "orchestra-demo-model",
+    provider: "demo",
+    status: input.status ?? "completed",
+    latencyMs: Math.max(0, Math.round(input.latencyMs ?? 42)),
+    costUsd: Number(input.costUsd ?? 0.000001),
+    prompt: "Demo request",
+    inputTokens: Math.max(0, Math.round(input.inputTokens ?? 24)),
+    outputTokens: Math.max(0, Math.round(input.outputTokens ?? 48)),
+  };
+  store.history.unshift(item);
+  return item;
 }
 
 export function computeMetrics(): Metrics {
@@ -100,11 +95,11 @@ export function computeMetrics(): Metrics {
   const avgLatency = recent.reduce((s, h) => s + h.latencyMs, 0) / Math.max(recent.length, 1);
   const blocked = store.history.filter((h) => h.status === "blocked").length;
   return {
-    totalRequests: 1_284_390 + store.history.length,
+    totalRequests: store.history.length,
     avgLatencyMs: Math.round(avgLatency),
-    costSavedUsd: Number((18_420 + store.history.reduce((s, h) => s + h.costUsd, 0)).toFixed(2)),
-    threatsBlocked: 342 + blocked,
-    healthPct: 99.98,
+    costSavedUsd: 0,
+    threatsBlocked: blocked,
+    healthPct: recent.length ? 100 : 0,
     updatedAt: new Date().toISOString(),
   };
 }

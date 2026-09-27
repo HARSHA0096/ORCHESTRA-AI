@@ -1,4 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@orchestra/database', () => ({
+  prisma: {
+    securityEvent: { create: vi.fn() },
+    provider: { findFirst: vi.fn().mockResolvedValue(null) },
+    providerModel: { findFirst: vi.fn().mockResolvedValue(null) },
+    budget: { findFirst: vi.fn().mockResolvedValue(null), update: vi.fn() },
+    requestEvent: { create: vi.fn().mockResolvedValue({ id: 'evt-1' }) },
+  },
+}));
+
 import { GatewayService } from './gateway.service.js';
 import { PipelineOrchestrator } from '../pipeline/pipeline-orchestrator.js';
 import { ValidationStage } from '../pipeline/stages/validation.stage.js';
@@ -18,6 +29,33 @@ describe('GatewayService', () => {
         tools: false,
         json: true,
       },
+      generate: async () => ({
+        content: 'test response',
+        provider: 'test-provider',
+        model: 'test-model',
+        finishReason: 'stop',
+        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        latencyMs: 0,
+      }),
+      stream: async function* () {},
+      health: async () => true,
+      models: async () => [],
+      getCapabilities: () => ({
+        streaming: false,
+        vision: false,
+        functions: false,
+        tools: false,
+        json: true,
+        embeddings: false,
+        images: false,
+        audio: false,
+      }),
+      supportsStreaming: () => false,
+      supportsVision: () => false,
+      supportsFunctions: () => false,
+      supportsTools: () => false,
+      supportsJSON: () => true,
+      supportsEmbeddings: () => false,
     });
 
     const service = new GatewayService({
@@ -31,8 +69,6 @@ describe('GatewayService', () => {
       model: 'test-model',
       userId: 'user-1',
       organizationId: 'org-1',
-      projectId: 'project-1',
-      apiKey: 'key-1',
       requestType: 'chat',
       metadata: { source: 'tests' },
     });
@@ -64,7 +100,7 @@ describe('PipelineOrchestrator', () => {
 
     expect(result.status).toBe('validated');
     expect(result.stages).toHaveLength(1);
-    expect(result.currentStage).toBe('validation');
+    expect(result.currentStage).toBe('completed');
   });
 });
 

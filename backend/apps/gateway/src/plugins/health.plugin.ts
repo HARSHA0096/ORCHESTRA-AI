@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 import { database } from '@orchestra/database';
 import { redis } from '@orchestra/redis';
+import { config } from '@orchestra/config';
 
 interface HealthCheckResult {
   status: 'up' | 'down';
@@ -18,6 +19,7 @@ interface HealthResponse {
   };
   version: string;
   environment: string;
+  demoMode: boolean;
   timestamp: string;
 }
 
@@ -83,6 +85,7 @@ async function getHealthStatus(): Promise<HealthResponse> {
     },
     version: '0.1.0',
     environment: process.env['NODE_ENV'] ?? 'development',
+    demoMode: (config.demo?.enabled ?? false),
     timestamp: new Date().toISOString(),
   };
 }
@@ -123,6 +126,7 @@ async function healthPluginImpl(fastify: FastifyInstance): Promise<void> {
               },
               version: { type: 'string' },
               environment: { type: 'string' },
+              demoMode: { type: 'boolean' },
               timestamp: { type: 'string' },
             },
           },

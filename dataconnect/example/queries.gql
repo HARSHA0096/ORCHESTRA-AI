@@ -1,0 +1,170 @@
+mutation CreateProject($name: String!, $description: String) @auth(level: USER) {
+  project_insert(data: { name: $name, description: $description, ownerId_expr: "auth.uid" })
+}
+
+mutation UpdateProject($id: UUID!, $name: String) @auth(level: USER) {
+  project_update(id: $id, data: { name: $name })
+}
+
+mutation DeleteProject($id: UUID!) @auth(level: USER) {
+  project_delete(id: $id)
+}
+
+query GetProject($id: UUID!) @auth(level: USER) {
+  project(id: $id) {
+    name
+    description
+    createdAt
+  }
+}
+
+query ListProjects @auth(level: USER) {
+  projects(where: { ownerId: { eq_expr: "auth.uid" } }) {
+    id
+    name
+  }
+}
+
+mutation CreateProviderConfig($providerType: String!, $apiKey: String!, $endpoint: String!, $projectId: UUID!) @auth(level: USER) {
+  providerConfig_insert(data: {
+    providerType: $providerType,
+    apiKeyEncrypted: $apiKey,
+    baseEndpoint: $endpoint,
+    project: { id: $projectId }
+  })
+}
+
+mutation UpdateProviderConfig($id: UUID!, $status: String) @auth(level: USER) {
+  providerConfig_update(id: $id, data: { status: $status })
+}
+
+mutation DeleteProviderConfig($id: UUID!) @auth(level: USER) {
+  providerConfig_delete(id: $id)
+}
+
+query GetProviderConfig($id: UUID!) @auth(level: USER) {
+  providerConfig(id: $id) {
+    providerType
+    status
+  }
+}
+
+query ListProviderConfigs @auth(level: USER) {
+  providerConfigs {
+    id
+    providerType
+  }
+}
+
+mutation CreateGatewayKey($keyHash: String!, $projectId: UUID!) @auth(level: USER) {
+  gatewayKey_insert(data: { keyHash: $keyHash, status: "active", project: { id: $projectId } })
+}
+
+mutation UpdateGatewayKey($id: UUID!, $status: String!) @auth(level: USER) {
+  gatewayKey_update(id: $id, data: { status: $status })
+}
+
+mutation DeleteGatewayKey($id: UUID!) @auth(level: USER) {
+  gatewayKey_delete(id: $id)
+}
+
+query GetGatewayKey($id: UUID!) @auth(level: USER) {
+  gatewayKey(id: $id) {
+    status
+    expiresAt
+  }
+}
+
+query ListGatewayKeys @auth(level: USER) {
+  gatewayKeys {
+    keyHash
+    status
+  }
+}
+
+mutation CreateRoutingRule($priority: Int!, $projectId: UUID!, $providerId: UUID!) @auth(level: USER) {
+  routingRule_insert(data: {
+    priority: $priority,
+    project: { id: $projectId },
+    targetProvider: { id: $providerId }
+  })
+}
+
+mutation UpdateRoutingRule($id: UUID!, $priority: Int!) @auth(level: USER) {
+  routingRule_update(id: $id, data: { priority: $priority })
+}
+
+mutation DeleteRoutingRule($id: UUID!) @auth(level: USER) {
+  routingRule_delete(id: $id)
+}
+
+query GetRoutingRule($id: UUID!) @auth(level: USER) {
+  routingRule(id: $id) {
+    priority
+    trafficWeight
+  }
+}
+
+query ListRoutingRules @auth(level: USER) {
+  routingRules {
+    priority
+    modelFilter
+  }
+}
+
+mutation CreateRequestLog($latency: Int!, $cost: Float!, $gatewayKeyId: UUID!, $providerId: UUID!) @auth(level: USER) {
+  requestLog_insert(data: {
+    latencyMs: $latency,
+    cost: $cost,
+    gatewayKey: { id: $gatewayKeyId },
+    provider: { id: $providerId }
+  })
+}
+
+mutation UpdateRequestLog($id: UUID!, $statusCode: Int!) @auth(level: USER) {
+  requestLog_update(id: $id, data: { statusCode: $statusCode })
+}
+
+mutation DeleteRequestLog($id: UUID!) @auth(level: USER) {
+  requestLog_delete(id: $id)
+}
+
+query GetRequestLog($id: UUID!) @auth(level: USER) {
+  requestLog(id: $id) {
+    latencyMs
+    cost
+    statusCode
+  }
+}
+
+query ListRequestLogs @auth(level: USER) {
+  requestLogs {
+    modelUsed
+    errorMessage
+  }
+}
+
+mutation CreateSecurityPolicy($type: String!, $projectId: UUID!) @auth(level: USER) {
+  securityPolicy_insert(data: { policyType: $type, project: { id: $projectId } })
+}
+
+mutation UpdateSecurityPolicy($id: UUID!, $json: String!) @auth(level: USER) {
+  securityPolicy_update(id: $id, data: { configurationJson: $json })
+}
+
+mutation DeleteSecurityPolicy($id: UUID!) @auth(level: USER) {
+  securityPolicy_delete(id: $id)
+}
+
+query GetSecurityPolicy($id: UUID!) @auth(level: USER) {
+  securityPolicy(id: $id) {
+    policyType
+    configurationJson
+  }
+}
+
+query ListSecurityPolicies @auth(level: USER) {
+  securityPolicies {
+    policyType
+  }
+}

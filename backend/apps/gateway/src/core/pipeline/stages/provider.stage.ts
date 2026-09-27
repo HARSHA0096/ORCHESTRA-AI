@@ -66,6 +66,7 @@ export class ProviderStage extends BasePipelineStage {
         for await (const chunk of adapter.stream(context)) {
           fullContent += chunk.content;
           chunkCount++;
+          context.onStreamChunk?.(chunk);
         }
 
         const latencyMs = Date.now() - providerStart;
@@ -83,7 +84,11 @@ export class ProviderStage extends BasePipelineStage {
           provider: providerName,
           model: modelName,
           finishReason: 'stop',
-          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          usage: {
+            promptTokens: context.promptMetadata?.promptTokenEstimate ?? 0,
+            completionTokens: Math.max(1, Math.ceil(fullContent.length / 4)),
+            totalTokens: (context.promptMetadata?.promptTokenEstimate ?? 0) + Math.max(1, Math.ceil(fullContent.length / 4)),
+          },
           latencyMs,
           metadata: { streaming: true, chunkCount },
         };
@@ -110,12 +115,14 @@ export class ProviderStage extends BasePipelineStage {
     } catch (error) {
       log.error({ requestId: context.requestId, provider: providerName, err: error }, 'Provider execution failed');
 
+      const providerError = error as Error & { errorCode?: string; statusCode?: number; retryable?: boolean };
+
       context.error = {
-        code: 'PROVIDER_ERROR',
-        message: error instanceof Error ? error.message : String(error),
+        code: providerError.errorCode ?? 'PROVIDER_ERROR',
+        message: error instanceof Error ? error.message : 'Provider request failed',
         provider: providerName,
-        retryable: true,
-        statusCode: 500,
+        retryable: providerError.retryable ?? (providerError.statusCode === undefined || providerError.statusCode >= 500 || providerError.statusCode === 429),
+        statusCode: providerError.statusCode ?? 500,
         timestamp: new Date().toISOString(),
         stage: 'provider',
       };

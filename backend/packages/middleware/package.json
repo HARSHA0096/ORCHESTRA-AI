@@ -9,10 +9,11 @@
     "@orchestra/auth": "workspace:*",
     "@orchestra/errors": "workspace:*",
     "@orchestra/database": "workspace:*",
-    "@orchestra/logger": "workspace:*"
+    "@orchestra/logger": "workspace:*",
+    "@orchestra/shared": "workspace:*",
+    "fastify": "^5.1.0"
   },
   "peerDependencies": {
-    "fastify": "^5.0.0",
     "zod": "^3.23.0"
   }
 }

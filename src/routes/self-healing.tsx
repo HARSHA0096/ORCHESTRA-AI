@@ -16,22 +16,9 @@ export const Route = createFileRoute("/self-healing")({
 
 type Playbook = { t: string; d: string; on: boolean };
 
-const PLAYBOOKS_SEED: Playbook[] = [
-  { t: "Retry w/ Backoff",    d: "Exponential 100ms → 2s, up to 5 attempts.", on: true },
-  { t: "Provider Fallback",   d: "Auto-switch to next best provider in chain.", on: true },
-  { t: "Circuit Breaker",     d: "Open after 5 failures, half-open after 60s.", on: true },
-  { t: "Regional Failover",   d: "Cross-region request rerouting.", on: true },
-  { t: "Cache Substitution",  d: "Serve cached responses when upstream is down.", on: true },
-  { t: "Degraded Mode",       d: "Drop to smaller, faster model under stress.", on: false },
-];
+const PLAYBOOKS_SEED: Playbook[] = [];
 
-const SEED_EVENTS = [
-  { ts: "14:04:12", desc: "OpenAI 5xx burst — failed-over to Claude 3.5 for 14s", outcome: "recovered" },
-  { ts: "13:51:02", desc: "Embedding latency spike — switched region us-east → eu-west", outcome: "recovered" },
-  { ts: "13:32:41", desc: "Gemini quota near limit — throttled non-critical calls",  outcome: "mitigated" },
-  { ts: "13:11:08", desc: "DeepSeek connection refused — circuit opened 60s",        outcome: "recovered" },
-  { ts: "12:58:50", desc: "Rate limit on /chat — backoff & retry 3x",                outcome: "recovered" },
-];
+const SEED_EVENTS: { ts: string; desc: string; outcome: string }[] = [];
 
 function SelfHealingPage() {
   const [playbooks, setPlaybooks] = useState<Playbook[]>(PLAYBOOKS_SEED);
@@ -50,11 +37,8 @@ function SelfHealingPage() {
     setDrillRunning(true);
     toast.message("Failover drill started…");
     await new Promise((r) => setTimeout(r, 1400));
-    const now = new Date();
-    const ts = now.toTimeString().slice(0, 8);
-    setEvents((s) => [{ ts, desc: "Manual drill — synthetic failover succeeded in 412ms", outcome: "recovered" }, ...s]);
     setDrillRunning(false);
-    toast.success("Drill complete · 412ms recovery");
+    toast.success("Drill complete; connect the backend to record results");
   };
 
   return (
@@ -72,10 +56,10 @@ function SelfHealingPage() {
       />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Auto Recoveries (24h)" value={String(184 + events.length - SEED_EVENTS.length)} delta="+18%" color="var(--neon-green)"  icon={RefreshCw} />
-        <StatCard label="Mean Recovery"         value="412ms" delta="-92ms" color="var(--neon-cyan)"  icon={LifeBuoy} />
-        <StatCard label="Uptime SLA"            value="99.99%" delta="+0.02%" color="var(--neon-violet)" icon={CheckCircle2} />
-        <StatCard label="Circuits Open"         value="0"     delta="-2"   color="var(--neon-amber)"   icon={AlertTriangle} />
+        <StatCard label="Auto Recoveries (24h)" value={String(events.length)} delta="No data" color="var(--neon-green)"  icon={RefreshCw} />
+        <StatCard label="Mean Recovery"         value="—" delta="No data" color="var(--neon-cyan)"  icon={LifeBuoy} />
+        <StatCard label="Uptime SLA"            value="—" delta="No data" color="var(--neon-violet)" icon={CheckCircle2} />
+        <StatCard label="Circuits Open"         value="—"     delta="No data"   color="var(--neon-amber)"   icon={AlertTriangle} />
       </section>
 
       <Panel eyebrow="Timeline" title="Recovery Events">

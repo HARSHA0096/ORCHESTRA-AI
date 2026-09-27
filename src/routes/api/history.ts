@@ -10,19 +10,24 @@ export const Route = createFileRoute("/api/history")({
   server: {
     handlers: {
       GET: async ({ request }) => {
+        const base = (import.meta.env.VITE_BACKEND_URL as string | undefined) || "http://localhost:3001";
+        try {
+          const response = await fetch(`${base}/api/v1/demo/history`, { cache: "no-store" });
+          if (response.ok) {
+            const items = await response.json();
+            const url = new URL(request.url);
+            return json({ items, total: items.length, page: 1, pageSize: items.length });
+          }
+        } catch {}
         const { getStore } = await import("@/lib/api-store.server");
         const url = new URL(request.url);
-        const q = (url.searchParams.get("q") ?? "").toLowerCase();
-        const status = url.searchParams.get("status") ?? "all";
         const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
         const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get("pageSize")) || 20));
-
-        let items = getStore().history;
-        if (status !== "all") items = items.filter((i) => i.status === status);
-        if (q) items = items.filter((i) => i.prompt.toLowerCase().includes(q) || i.model.toLowerCase().includes(q));
-        const total = items.length;
-        const paged = items.slice((page - 1) * pageSize, page * pageSize);
-        return json({ items: paged, total, page, pageSize });
+        const items = getStore().history.map((item) => ({
+          id: item.id, requestId: item.id, endpoint: "/v1/chat/completions", status: item.status === "blocked" ? "FAILED" : "SUCCESS",
+          model: item.model, latencyMs: item.latencyMs, inputTokens: (item as any).inputTokens ?? 0, outputTokens: (item as any).outputTokens ?? 0, cost: item.costUsd, createdAt: item.timestamp,
+        }));
+        return json({ items, total: items.length, page, pageSize, source: "frontend-demo" });
       },
     },
   },

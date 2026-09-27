@@ -17,21 +17,9 @@ export const Route = createFileRoute("/security")({
 type Threat = { id: string; type: string; source: string; severity: "high" | "medium" | "low"; blocked: boolean; ts: string };
 type Policy = { name: string; coverage: number; enforced: boolean };
 
-const SEED: Threat[] = [
-  { id: "t1", type: "Prompt Injection",  source: "192.0.2.41",  severity: "high",   blocked: true,  ts: "14:02:18" },
-  { id: "t2", type: "PII Leak Attempt",  source: "internal:api",severity: "high",   blocked: true,  ts: "14:01:42" },
-  { id: "t3", type: "Jailbreak Pattern", source: "203.0.113.9", severity: "medium", blocked: true,  ts: "13:58:09" },
-  { id: "t4", type: "Rate Anomaly",      source: "198.51.100.7",severity: "low",    blocked: false, ts: "13:54:51" },
-  { id: "t5", type: "Unsafe Output",     source: "model:gpt-4o",severity: "medium", blocked: true,  ts: "13:49:12" },
-];
+const SEED: Threat[] = [];
 
-const POLICIES_SEED: Policy[] = [
-  { name: "PII Redaction",            coverage: 100, enforced: true },
-  { name: "Prompt Injection Shield",  coverage: 98,  enforced: true },
-  { name: "Data Loss Prevention",     coverage: 92,  enforced: true },
-  { name: "Output Moderation",        coverage: 96,  enforced: true },
-  { name: "Allowlist / Blocklist",    coverage: 100, enforced: true },
-];
+const POLICIES_SEED: Policy[] = [];
 
 const sevColor = (s: string) => s === "high" ? "var(--neon-red)" : s === "medium" ? "var(--neon-amber)" : "var(--neon-cyan)";
 
@@ -64,10 +52,10 @@ function SecurityPage() {
       />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Threats Blocked (24h)" value="1,284" delta="+12%" color="var(--neon-red)" icon={ShieldAlert} />
+        <StatCard label="Threats Blocked (24h)" value="0" delta="No data" color="var(--neon-red)" icon={ShieldAlert} />
         <StatCard label={`Active Policies`}     value={String(policies.filter((p) => p.enforced).length)} color="var(--neon-violet)" icon={ShieldCheck} />
-        <StatCard label="Coverage"              value="98.6%" delta="+0.4%" color="var(--neon-green)" icon={Shield} />
-        <StatCard label="Risk Score"            value="Low"   delta="-2"   color="var(--neon-cyan)" icon={Lock} />
+        <StatCard label="Coverage"              value="—" delta="No data" color="var(--neon-green)" icon={Shield} />
+        <StatCard label="Risk Score"            value="—"   delta="No data"   color="var(--neon-cyan)" icon={Lock} />
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">

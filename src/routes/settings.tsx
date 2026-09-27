@@ -21,7 +21,7 @@ type Section = { icon: typeof SettingsIcon; title: string; items: Field[] };
 
 const DEFAULTS: Section[] = [
   { icon: SettingsIcon, title: "Workspace", items: [
-    { l: "Organization name", v: "Acme Corp" },
+    { l: "Organization name", v: "ORCHESTRA Demo" },
     { l: "Default environment", v: "Production" },
     { l: "Data retention", v: "90 days" },
   ]},

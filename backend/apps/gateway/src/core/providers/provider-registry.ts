@@ -16,7 +16,9 @@ import {
   OllamaAdapter,
   OpenRouterAdapter,
   AzureOpenAIAdapter,
+  DemoAdapter,
 } from './adapters/index.js';
+import { config } from '@orchestra/config';
 
 const log = logger.child({ module: 'provider-registry' });
 
@@ -37,6 +39,7 @@ export class ProviderRegistry {
    */
   registerDefaults(): void {
     const adapters: IProviderAdapter[] = [
+      ...(config.demo?.enabled ? [new DemoAdapter()] : []),
       new OpenAIAdapter(),
       new ClaudeAdapter(),
       new GeminiAdapter(),

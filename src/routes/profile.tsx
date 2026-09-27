@@ -18,16 +18,12 @@ type Identity = { name: string; email: string; mfa: string; sso: string };
 type Session = { id: string; device: string; loc: string; ip: string; last: string };
 
 const DEFAULT_ID: Identity = {
-  name: "Jane Cooper",
-  email: "jane@acme.com",
-  mfa: "Authenticator + Hardware Key",
-  sso: "Okta (acme.okta.com)",
+  name: "",
+  email: "",
+  mfa: "Not configured",
+  sso: "Not configured",
 };
-const SEED_SESS: Session[] = [
-  { id: "s1", device: "MacBook Pro · Chrome", loc: "San Francisco, US", ip: "73.214.18.4",  last: "Active now" },
-  { id: "s2", device: "iPhone 15 · Safari",   loc: "San Francisco, US", ip: "100.64.0.12",  last: "2h ago" },
-  { id: "s3", device: "Linux · Firefox",      loc: "Berlin, DE",        ip: "82.142.11.9",  last: "yesterday" },
-];
+const SEED_SESS: Session[] = [];
 
 function ProfilePage() {
   const [id, setId] = useState<Identity>(DEFAULT_ID);
@@ -80,7 +76,7 @@ function ProfilePage() {
             <div className="grid h-20 w-20 place-items-center rounded-full font-display text-2xl font-bold text-[oklch(0.16_0.04_270)]"
                  style={{ background: "var(--gradient-pink-violet)", boxShadow: "var(--shadow-glow-violet)" }}>{initials}</div>
             <div className="mt-3 font-display text-lg font-semibold">{id.name}</div>
-            <div className="text-xs text-muted-foreground">Platform Admin · Acme</div>
+            <div className="text-xs text-muted-foreground">Demo Environment · ORCHESTRA</div>
             <div className="mt-4 grid w-full grid-cols-3 gap-2 text-xs">
               <div className="rounded-md bg-white/[0.03] p-2"><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Role</div><div className="mt-0.5 font-mono text-[var(--neon-violet)]">admin</div></div>
               <div className="rounded-md bg-white/[0.03] p-2"><div className="text-[10px] uppercase tracking-wider text-muted-foreground">MFA</div><div className="mt-0.5 font-mono text-[var(--neon-green)]">on</div></div>
@@ -91,9 +87,9 @@ function ProfilePage() {
 
         <div className="space-y-4">
           <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatCard label="API Calls (30d)" value="184k"  color="var(--neon-cyan)"   icon={Activity} />
-            <StatCard label="Personal Keys"   value="3"     color="var(--neon-violet)" icon={KeyRound} />
-            <StatCard label="Projects"        value="6"     color="var(--neon-pink)"   icon={User} />
+            <StatCard label="API Calls (30d)" value="0" delta="No data" color="var(--neon-cyan)" icon={Activity} />
+            <StatCard label="Personal Keys" value="—" delta="Deferred" color="var(--neon-violet)" icon={KeyRound} />
+            <StatCard label="Projects" value="0" delta="No data" color="var(--neon-pink)" icon={User} />
             <StatCard label="Permissions"     value="full"  color="var(--neon-green)"  icon={Shield} />
           </section>
 

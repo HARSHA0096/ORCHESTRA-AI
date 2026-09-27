@@ -1,0 +1,27 @@
+mutation SeedDatabase @transaction {
+  project_insertMany(data: [
+    { name: "Alpha", ownerId: "550e8400-e29b-41d4-a716-446655440000" },
+    { name: "Beta", ownerId: "550e8400-e29b-41d4-a716-446655440001" },
+    { name: "Gamma", ownerId: "550e8400-e29b-41d4-a716-446655440002" }
+  ])
+  providerConfig_insertMany(data: [
+    { providerType: "OpenAI", apiKeyEncrypted: "enc_1", baseEndpoint: "api.openai.com", project: { id: "550e8400-e29b-41d4-a716-446655440000" } },
+    { providerType: "Anthropic", apiKeyEncrypted: "enc_2", baseEndpoint: "api.anthropic.com", project: { id: "550e8400-e29b-41d4-a716-446655440001" } },
+    { providerType: "Google", apiKeyEncrypted: "enc_3", baseEndpoint: "generativelanguage.googleapis.com", project: { id: "550e8400-e29b-41d4-a716-446655440002" } }
+  ])
+  gatewayKey_insertMany(data: [
+    { keyHash: "h1", status: "active", usageLimit: 1000, project: { id: "550e8400-e29b-41d4-a716-446655440000" } },
+    { keyHash: "h2", status: "active", usageLimit: 500, project: { id: "550e8400-e29b-41d4-a716-446655440001" } },
+    { keyHash: "h3", status: "revoked", usageLimit: 0, project: { id: "550e8400-e29b-41d4-a716-446655440002" } }
+  ])
+  routingRule_insertMany(data: [
+    { priority: 1, trafficWeight: 0.5, project: { id: "550e8400-e29b-41d4-a716-446655440000" }, targetProvider: { id: "550e8400-e29b-41d4-a716-446655440000" } },
+    { priority: 2, trafficWeight: 0.3, project: { id: "550e8400-e29b-41d4-a716-446655440001" }, targetProvider: { id: "550e8400-e29b-41d4-a716-446655440001" } },
+    { priority: 3, trafficWeight: 0.2, project: { id: "550e8400-e29b-41d4-a716-446655440002" }, targetProvider: { id: "550e8400-e29b-41d4-a716-446655440002" } }
+  ])
+  securityPolicy_insertMany(data: [
+    { policyType: "RateLimit", configurationJson: "{}", project: { id: "550e8400-e29b-41d4-a716-446655440000" } },
+    { policyType: "IPAllowlist", configurationJson: "{}", project: { id: "550e8400-e29b-41d4-a716-446655440001" } },
+    { policyType: "AuthRequired", configurationJson: "{}", project: { id: "550e8400-e29b-41d4-a716-446655440002" } }
+  ])
+}

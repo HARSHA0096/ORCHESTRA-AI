@@ -3,7 +3,7 @@ import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { AppShell, PageHero, Panel, StatCard, Modal, Btn } from "@/components/app-shell";
 import { History as HistoryIcon, CheckCircle2, AlertTriangle, RefreshCw, Search, X, ChevronLeft, ChevronRight, Download } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 const searchSchema = z.object({
@@ -28,19 +28,7 @@ type Row = {
   cost: string; status: "completed" | "blocked" | "recovered" | "routed"; ts: string;
 };
 
-const ROWS: Row[] = Array.from({ length: 64 }, (_, i) => {
-  const models = ["gpt-4o", "claude-3.5", "gemini-1.5", "deepseek-v2", "mistral-l"];
-  const statuses: Row["status"][] = ["completed", "completed", "completed", "blocked", "recovered", "routed"];
-  return {
-    id: `req_${(0x8a3f9c00 + i).toString(16)}`,
-    model: models[i % models.length],
-    tokens: 200 + Math.round(Math.random() * 4800),
-    latency: 180 + Math.round(Math.random() * 800),
-    cost: (Math.random() * 0.08).toFixed(4),
-    status: statuses[i % statuses.length],
-    ts: `14:${String(4 - Math.floor(i / 16)).padStart(2,"0")}:${String((59 - i * 3) % 60).padStart(2,"0")}`,
-  };
-});
+const ROWS: Row[] = [];
 
 const statusStyle = (s: string) => ({
   completed: "bg-[oklch(0.85_0.21_155/0.12)] text-[var(--neon-green)]",
@@ -55,8 +43,29 @@ function HistoryPage() {
   const { q, status, page } = Route.useSearch();
   const navigate = Route.useNavigate();
   const [details, setDetails] = useState<Row | null>(null);
+  const [rows, setRows] = useState<Row[]>(ROWS);
 
-  const filtered = useMemo(() => ROWS.filter((r) =>
+  useEffect(() => {
+    let active = true;
+    fetch('/api/history?page=1&pageSize=100', { cache: 'no-store' })
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => {
+        if (!active || !payload?.items) return;
+        setRows(payload.items.map((item: any) => ({
+          id: item.requestId ?? item.id,
+          model: item.model ?? 'unknown',
+          tokens: (item.inputTokens ?? 0) + (item.outputTokens ?? 0),
+          latency: item.latencyMs ?? 0,
+          cost: Number(item.cost ?? 0).toFixed(6),
+          status: item.status === 'FAILED' ? 'blocked' : 'completed',
+          ts: item.createdAt ? new Date(item.createdAt).toLocaleString() : '—',
+        })));
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
+  const filtered = useMemo(() => rows.filter((r) =>
     (status === "all" || r.status === status) &&
     (q === "" || r.id.includes(q.toLowerCase()) || r.model.includes(q.toLowerCase()))
   ), [q, status]);
@@ -90,10 +99,10 @@ function HistoryPage() {
       />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Records (24h)" value={ROWS.length.toLocaleString()} delta="+8%" color="var(--neon-cyan)" icon={HistoryIcon} />
-        <StatCard label="Completed"     value="98.6%" color="var(--neon-green)" icon={CheckCircle2} />
-        <StatCard label="Blocked"       value={String(ROWS.filter((r) => r.status === "blocked").length)} delta="+12" color="var(--neon-red)" icon={AlertTriangle} />
-        <StatCard label="Recovered"     value={String(ROWS.filter((r) => r.status === "recovered").length)} delta="+18" color="var(--neon-violet)" icon={RefreshCw} />
+        <StatCard label="Records (24h)" value={ROWS.length.toLocaleString()} delta="No data" color="var(--neon-cyan)" icon={HistoryIcon} />
+        <StatCard label="Completed"     value="—" delta="No data" color="var(--neon-green)" icon={CheckCircle2} />
+        <StatCard label="Blocked"       value={String(ROWS.filter((r) => r.status === "blocked").length)} delta="No data" color="var(--neon-red)" icon={AlertTriangle} />
+        <StatCard label="Recovered"     value={String(ROWS.filter((r) => r.status === "recovered").length)} delta="No data" color="var(--neon-violet)" icon={RefreshCw} />
       </section>
 
       <Panel
