@@ -199,7 +199,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       fastify:
-        specifier: ^5.1.0
+        specifier: ^5.0.0
         version: 5.11.0
       zod:
         specifier: ^3.23.0
