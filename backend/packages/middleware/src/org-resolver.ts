@@ -1,4 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import type { OrchestraRequest } from './request-types.js';
 import { prisma } from '@orchestra/database';
 import { ForbiddenError, NotFoundError, ErrorCode } from '@orchestra/errors';
 
@@ -6,7 +7,8 @@ export async function resolveOrganization(
   request: FastifyRequest,
   _reply: FastifyReply,
 ): Promise<void> {
-  const user = request.user;
+  const orchestraRequest = request as OrchestraRequest;
+  const user = orchestraRequest.user;
   if (!user) {
     throw new ForbiddenError('Authentication required', ErrorCode.AUTH_FORBIDDEN);
   }
@@ -30,9 +32,9 @@ export async function resolveOrganization(
     throw new NotFoundError('Organization not found or access denied', ErrorCode.ORG_NOT_FOUND);
   }
 
-  request.organization = {
+  orchestraRequest.organization = {
     id: orgId,
     role: membership.role,
   };
-  request.requestContext.organizationId = orgId;
+  orchestraRequest.requestContext.organizationId = orgId;
 }

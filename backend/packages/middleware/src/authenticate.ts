@@ -1,4 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import type { OrchestraRequest } from './request-types.js';
 import { verifyAccessToken } from '@orchestra/auth';
 import { UnauthorizedError, ErrorCode } from '@orchestra/errors';
 
@@ -13,6 +14,7 @@ export async function authenticateJwt(
 
   const token = authHeader.substring(7);
   const payload = verifyAccessToken(token);
-  request.user = payload;
-  request.requestContext.userId = payload.sub;
+  const orchestraRequest = request as OrchestraRequest;
+  orchestraRequest.user = payload;
+  orchestraRequest.requestContext.userId = payload.sub;
 }

@@ -3,6 +3,7 @@ import { AppShell, PageHero, Panel, StatCard, Modal, Btn } from "@/components/ap
 import { Boxes, Rocket, GitBranch, Users, Activity, Plus, Search, MoreHorizontal, Pencil, Copy, Archive, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { api, session } from "@/lib/api";
 
 export const Route = createFileRoute("/projects")({
   head: () => ({
@@ -45,14 +46,15 @@ function ProjectsPage() {
   const [form, setForm] = useState({ name: "", env: "dev" as Project["env"] });
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE);
-      if (raw) setProjects(JSON.parse(raw));
-    } catch { /* noop */ }
+    if (!session.accessToken) return;
+    api.get<any[]>("/api/v1/organizations").then(async (orgs) => {
+      const org = orgs[0]; if (!org) return;
+      const data = await api.get<any[]>(`/api/v1/organizations/${org.id}/projects`);
+      if (!session.projectId && data?.[0]) session.setProject(data[0].id, org.id); else session.setProject(session.projectId ?? "", org.id);
+      setProjects((data ?? []).map((p: any) => ({ id: p.id, name: p.name, env: "dev", models: 0, reqs: "0", spend: "$0", status: p.status === "ACTIVE" ? "healthy" : "guarded", color: ENV_COLORS.dev, archived: Boolean(p.archived) })));
+    }).catch(() => undefined);
   }, []);
-  useEffect(() => {
-    window.localStorage.setItem(STORAGE, JSON.stringify(projects));
-  }, [projects]);
+
 
   useEffect(() => {
     const close = () => setOpenMenu(null);
@@ -71,35 +73,37 @@ function ProjectsPage() {
   const openCreate = () => { setForm({ name: "", env: "dev" }); setCreateOpen(true); };
   const openEdit = (p: Project) => { setForm({ name: p.name, env: p.env }); setEditing(p); };
 
-  const submitCreate = () => {
+  const submitCreate = async () => {
     const name = form.name.trim();
     if (!name) { toast.error("Name is required"); return; }
-    const id = `p${Date.now()}`;
-    setProjects((s) => [{ id, name, env: form.env, models: 0, reqs: "0", spend: "$0", status: "healthy", color: ENV_COLORS[form.env] }, ...s]);
-    toast.success(`Project "${name}" created`);
-    setCreateOpen(false);
+    const orgId = session.organizationId;
+    if (!orgId) { toast.error("Select or create an organization first"); return; }
+    try {
+      const p = await api.post<any>(`/api/v1/organizations/${orgId}/projects`, { name });
+      setProjects((s) => [{ id: p.id, name: p.name, env: form.env, models: 0, reqs: "0", spend: "$0", status: "healthy", color: ENV_COLORS[form.env] }, ...s]);
+      session.setProject(p.id, orgId); toast.success(`Project "${name}" created`); setCreateOpen(false);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Unable to create project"); }
   };
-  const submitEdit = () => {
+  const submitEdit = async () => {
     if (!editing) return;
     const name = form.name.trim();
     if (!name) { toast.error("Name is required"); return; }
-    setProjects((s) => s.map((p) => p.id === editing.id ? { ...p, name, env: form.env, color: ENV_COLORS[form.env] } : p));
-    toast.success("Project updated");
-    setEditing(null);
+    try { await api.patch(`/api/v1/organizations/${session.organizationId}/projects/${editing.id}`, { name }); setProjects((s) => s.map((p) => p.id === editing.id ? { ...p, name, env: form.env, color: ENV_COLORS[form.env] } : p)); toast.success("Project updated"); setEditing(null); } catch (e) { toast.error(e instanceof Error ? e.message : "Unable to update project"); }
   };
   const duplicate = (p: Project) => {
     setProjects((s) => [{ ...p, id: `p${Date.now()}`, name: `${p.name} (copy)` }, ...s]);
     toast.success(`Duplicated "${p.name}"`);
   };
-  const archive = (p: Project) => {
-    setProjects((s) => s.map((x) => x.id === p.id ? { ...x, archived: !x.archived } : x));
-    toast.message(p.archived ? "Project restored" : "Project archived");
+  const archive = async (p: Project) => {
+    try { await api.post(`/api/v1/organizations/${session.organizationId}/projects/${p.id}/archive`, {}); setProjects((s) => s.map((x) => x.id === p.id ? { ...x, archived: !x.archived } : x)); toast.message(p.archived ? "Project restored" : "Project archived"); } catch (e) { toast.error(e instanceof Error ? e.message : "Unable to archive project"); }
   };
-  const confirmDelete = () => {
-    if (!deleting) return;
-    setProjects((s) => s.filter((p) => p.id !== deleting.id));
-    toast.success(`Deleted "${deleting.name}"`);
-    setDeleting(null);
+  const confirmDelete = async () => {
+    if (!deleting || !session.organizationId) return;
+    try {
+      const response = await fetch(`${(import.meta.env.VITE_BACKEND_URL as string | undefined) || "http://localhost:3001"}/api/v1/organizations/${session.organizationId}/projects/${deleting.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${session.accessToken}` } });
+      if (!response.ok) throw new Error("Unable to delete project");
+      setProjects((s) => s.filter((p) => p.id !== deleting.id)); toast.success(`Deleted "${deleting.name}"`); setDeleting(null);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Unable to delete project"); }
   };
 
   const active = projects.filter((p) => !p.archived).length;

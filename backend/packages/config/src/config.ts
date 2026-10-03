@@ -56,6 +56,7 @@ export interface Config {
   rateLimit: {
     max: number;
     windowMs: number;
+    maxBodySize: number;
   };
   queue: {
     prefix: string;
@@ -99,6 +100,7 @@ export const config: Config = {
   rateLimit: {
     max: env.RATE_LIMIT_MAX,
     windowMs: env.RATE_LIMIT_WINDOW_MS,
+    maxBodySize: env.MAX_BODY_SIZE,
   },
   queue: {
     prefix: env.QUEUE_PREFIX,

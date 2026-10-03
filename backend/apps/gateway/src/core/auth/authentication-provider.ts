@@ -23,6 +23,10 @@ export class DemoAuthenticationProvider implements AuthenticationProvider {
   }
 }
 
+/**
+ * Development-only identity provider. It never creates or invents a project;
+ * it resolves an explicitly configured project and verifies that it is active.
+ */
 export class DevelopmentAuthenticationProvider implements AuthenticationProvider {
   async authenticate(request: FastifyRequest): Promise<GatewayIdentity> {
     const projectId = request.headers['x-project-id'] as string | undefined ?? config.development.projectId;

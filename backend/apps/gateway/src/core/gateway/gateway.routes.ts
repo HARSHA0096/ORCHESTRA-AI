@@ -42,6 +42,29 @@ function toGatewayInput(body: OpenAiChatCompletionInput, identity: { userId: str
 export async function gatewayRoutes(fastify: FastifyInstance): Promise<void> {
   const service = new GatewayService();
   const controller = createGatewayController(service);
+  fastify.get('/provider-health', {
+    schema: { tags: ['Gateway'], description: 'Live health status for registered provider adapters', security: [{ bearerAuth: [] }] },
+    preHandler: [authenticateJwt],
+    handler: async (request, reply) => {
+      const results = await service.getProviderManager().healthCheckAll();
+      const providers = Array.from(results.entries()).map(([provider, healthy]) => ({
+        provider,
+        status: healthy ? 'healthy' : 'unhealthy',
+      }));
+      const unhealthy = providers.filter((item) => item.status === 'unhealthy').length;
+      return reply.send({
+        success: true,
+        message: 'Provider health retrieved',
+        data: {
+          status: unhealthy === 0 ? 'healthy' : unhealthy === providers.length ? 'unhealthy' : 'degraded',
+          providers,
+        },
+        requestId: request.id,
+        timestamp: new Date().toISOString(),
+      });
+    },
+  });
+
   fastify.post('/', {
     schema: { tags: ['Gateway'], description: 'Execute an AI request through the middleware core', security: [{ bearerAuth: [] }] },
     preHandler: [authenticateJwt],

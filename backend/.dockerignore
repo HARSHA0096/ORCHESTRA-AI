@@ -1,0 +1,27 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# Dependency/build artifacts
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+**/coverage
+
+# Local tooling and VCS
+.git
+.gitignore
+.vscode
+.idea
+
+# Test/debug output
+*.log
+*.tmp
+.DS_Store
+
+# Local database/runtime state
+prisma/*.db
+prisma/*.db-journal

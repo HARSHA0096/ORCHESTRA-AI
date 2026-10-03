@@ -5,6 +5,7 @@ import { AppShell, PageHero, Panel, StatCard, Modal, Btn } from "@/components/ap
 import { History as HistoryIcon, CheckCircle2, AlertTriangle, RefreshCw, Search, X, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { api, session } from "@/lib/api";
 
 const searchSchema = z.object({
   q: fallback(z.string(), "").default(""),
@@ -44,23 +45,13 @@ function HistoryPage() {
   const navigate = Route.useNavigate();
   const [details, setDetails] = useState<Row | null>(null);
   const [rows, setRows] = useState<Row[]>(ROWS);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     let active = true;
-    fetch('/api/history?page=1&pageSize=100', { cache: 'no-store' })
-      .then((response) => response.ok ? response.json() : null)
-      .then((payload) => {
-        if (!active || !payload?.items) return;
-        setRows(payload.items.map((item: any) => ({
-          id: item.requestId ?? item.id,
-          model: item.model ?? 'unknown',
-          tokens: (item.inputTokens ?? 0) + (item.outputTokens ?? 0),
-          latency: item.latencyMs ?? 0,
-          cost: Number(item.cost ?? 0).toFixed(6),
-          status: item.status === 'FAILED' ? 'blocked' : 'completed',
-          ts: item.createdAt ? new Date(item.createdAt).toLocaleString() : '—',
-        })));
-      })
+    if (!session.accessToken || !session.projectId) return () => { active = false; };
+    api.get<any>(`/api/v1/history?projectId=${encodeURIComponent(session.projectId)}&page=1&perPage=100`)
+      .then((payload) => { if (!active) return; setTotal(Number(payload?.length ?? 0)); setRows((payload ?? []).map((item: any) => ({ id: item.requestId ?? item.id, model: item.modelId ?? 'unknown', tokens: (item.inputTokens ?? 0) + (item.outputTokens ?? 0), latency: item.latencyMs ?? 0, cost: Number(item.cost ?? 0).toFixed(6), status: item.status === 'FAILED' ? 'blocked' : item.status === 'RECOVERED' ? 'recovered' : item.status === 'ROUTED' ? 'routed' : 'completed', ts: item.createdAt ? new Date(item.createdAt).toLocaleString() : '—' }))); })
       .catch(() => undefined);
     return () => { active = false; };
   }, []);
@@ -99,10 +90,10 @@ function HistoryPage() {
       />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Records (24h)" value={ROWS.length.toLocaleString()} delta="No data" color="var(--neon-cyan)" icon={HistoryIcon} />
-        <StatCard label="Completed"     value="—" delta="No data" color="var(--neon-green)" icon={CheckCircle2} />
-        <StatCard label="Blocked"       value={String(ROWS.filter((r) => r.status === "blocked").length)} delta="No data" color="var(--neon-red)" icon={AlertTriangle} />
-        <StatCard label="Recovered"     value={String(ROWS.filter((r) => r.status === "recovered").length)} delta="No data" color="var(--neon-violet)" icon={RefreshCw} />
+        <StatCard label="Records (24h)" value={(total || rows.length).toLocaleString()} delta="No data" color="var(--neon-cyan)" icon={HistoryIcon} />
+        <StatCard label="Completed"     value={String(rows.filter((r) => r.status === "completed").length)} delta={rows.length ? "Live" : "No data"} color="var(--neon-green)" icon={CheckCircle2} />
+        <StatCard label="Blocked"       value={String(rows.filter((r) => r.status === "blocked").length)} delta="No data" color="var(--neon-red)" icon={AlertTriangle} />
+        <StatCard label="Recovered"     value={String(rows.filter((r) => r.status === "recovered").length)} delta="No data" color="var(--neon-violet)" icon={RefreshCw} />
       </section>
 
       <Panel

@@ -21,7 +21,7 @@ jobs:
           node-version: '22'
       - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 12.4.1
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
@@ -68,7 +68,7 @@ jobs:
           node-version: '22'
       - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 12.4.1
       - run: pnpm install --frozen-lockfile
       - run: npx prisma generate --schema=prisma/schema.prisma
       - run: pnpm test:coverage
@@ -86,9 +86,9 @@ jobs:
           node-version: '22'
       - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 12.4.1
       - run: pnpm install --frozen-lockfile
       - run: npx prisma generate --schema=prisma/schema.prisma
       - run: pnpm build
       - name: Docker build
-        run: docker build -f docker/Dockerfile -t orchestra-ai-gateway:test ..
+        run: docker build -f docker/Dockerfile -t orchestra-ai-gateway:test .

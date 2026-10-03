@@ -25,19 +25,27 @@ import { apiKeyRoutes } from './domains/api-keys/api-keys.routes.js';
 import { providerRoutes } from './domains/providers/providers.routes.js';
 import { auditRoutes } from './domains/audit/audit.routes.js';
 import { notificationRoutes } from './domains/notifications/notifications.routes.js';
+import { telemetryRoutes } from './domains/telemetry/telemetry.routes.js';
 import { gatewayRoutes, openAiCompatibleRoutes } from './core/gateway/gateway.routes.js';
 import { demoObservabilityRoutes } from './core/gateway/demo.routes.js';
 
 // ──────────────────────────────────────────────
 // App factory
 // ──────────────────────────────────────────────
-export async function buildApp(): Promise<FastifyInstance> {
+export async function buildApp(): Promise<FastifyInstance<any, any, any, any>> {
   const app = Fastify({
     loggerInstance: logger,
     requestIdHeader: 'x-request-id',
     genReqId: () => crypto.randomUUID(),
-    disableRequestLogging: true, // We handle this ourselves
+    bodyLimit: config.rateLimit.maxBodySize,
   });
+
+  // Process-local operational metrics. These are intentionally lightweight and
+  // complement persisted RequestEvent telemetry with instance-level health data.
+  let totalRequests = 0;
+  let totalErrors = 0;
+  let activeRequests = 0;
+  let totalDurationMs = 0;
 
   // ── Decorate request with custom properties ──
   app.decorateRequest('user', null);
@@ -154,10 +162,44 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
   });
 
+  // Machine-readable OpenAPI export. Swagger UI and this document are generated
+  // from the same registered Fastify routes so client tooling stays in sync.
+  app.get('/openapi.json', { schema: { hide: true } }, async (_request, reply) => {
+    return reply.type('application/json').send(app.swagger());
+  });
+
   // ────────────────────────────────────────────
   // 8. Health plugin
   // ────────────────────────────────────────────
   await app.register(healthPlugin);
+
+  // Prometheus-compatible process/request metrics for infrastructure scrapers.
+  // Persisted project telemetry remains available through /api/v1/metrics.
+  app.get('/metrics', async (_request, reply) => {
+    const avgDuration = totalRequests > 0 ? totalDurationMs / totalRequests : 0;
+    const lines = [
+      '# HELP orchestra_http_requests_total Total HTTP requests handled by this gateway process.',
+      '# TYPE orchestra_http_requests_total counter',
+      `orchestra_http_requests_total ${totalRequests}`,
+      '# HELP orchestra_http_errors_total Total HTTP 5xx responses from this gateway process.',
+      '# TYPE orchestra_http_errors_total counter',
+      `orchestra_http_errors_total ${totalErrors}`,
+      '# HELP orchestra_http_requests_active Current in-flight HTTP requests.',
+      '# TYPE orchestra_http_requests_active gauge',
+      `orchestra_http_requests_active ${activeRequests}`,
+      '# HELP orchestra_http_request_duration_ms_average Average HTTP request duration in milliseconds.',
+      '# TYPE orchestra_http_request_duration_ms_average gauge',
+      `orchestra_http_request_duration_ms_average ${avgDuration.toFixed(3)}`,
+      '# HELP orchestra_process_uptime_seconds Gateway process uptime in seconds.',
+      '# TYPE orchestra_process_uptime_seconds gauge',
+      `orchestra_process_uptime_seconds ${process.uptime().toFixed(3)}`,
+      '# HELP orchestra_process_memory_bytes Resident process memory in bytes.',
+      '# TYPE orchestra_process_memory_bytes gauge',
+      `orchestra_process_memory_bytes ${process.memoryUsage().rss}`,
+      '',
+    ].join('\n');
+    return reply.type('text/plain; version=0.0.4; charset=utf-8').send(lines);
+  });
 
   // ────────────────────────────────────────────
   // 9. Request ID + Correlation ID middleware
@@ -167,8 +209,11 @@ export async function buildApp(): Promise<FastifyInstance> {
     reply.header('x-request-id', request.id);
 
     // Correlation ID: use from header or generate new one
+    const incomingCorrelationId = request.headers['x-correlation-id'];
     const correlationId =
-      (request.headers['x-correlation-id'] as string | undefined) ?? crypto.randomUUID();
+      typeof incomingCorrelationId === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(incomingCorrelationId)
+        ? incomingCorrelationId
+        : crypto.randomUUID();
     reply.header('x-correlation-id', correlationId);
 
     // Attach request context
@@ -178,6 +223,8 @@ export async function buildApp(): Promise<FastifyInstance> {
       ip: request.ip,
       userAgent: request.headers['user-agent'] ?? 'unknown',
     };
+    totalRequests += 1;
+    activeRequests += 1;
   });
 
   // ────────────────────────────────────────────
@@ -197,6 +244,10 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   app.addHook('onResponse', async (request: FastifyRequest, reply: FastifyReply) => {
     const duration = reply.elapsedTime;
+    activeRequests = Math.max(0, activeRequests - 1);
+    totalDurationMs += duration;
+    if (reply.statusCode >= 500) totalErrors += 1;
+    reply.header('x-correlation-id', request.requestContext?.correlationId ?? '');
     request.log.info(
       {
         method: request.method,
@@ -241,7 +292,7 @@ export async function buildApp(): Promise<FastifyInstance> {
           ...errorResponse,
           error: {
             code: error.errorCode,
-            details: error.metadata,
+            ...(config.app.env !== 'production' && { details: error.metadata }),
           },
         });
       }
@@ -366,6 +417,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       await apiRouter.register(gatewayRoutes, { prefix: '/gateway' });
       await apiRouter.register(auditRoutes, { prefix: '/organizations' });
       await apiRouter.register(notificationRoutes, { prefix: '/notifications' });
+      await apiRouter.register(telemetryRoutes, { prefix: '' });
       await apiRouter.register(demoObservabilityRoutes, { prefix: '/demo' });
     },
     { prefix: '/api/v1' },

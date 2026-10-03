@@ -44,7 +44,9 @@ export class SecurityStage extends BasePipelineStage {
       });
 
       if (severity === 'high') {
-        throw new Error('Request blocked by security policy checks.');
+        const securityError = new Error('Request blocked by security policy checks.');
+        Object.assign(securityError, { retryable: false, statusCode: 403, errorCode: 'SECURITY_POLICY_BLOCKED' });
+        throw securityError;
       }
     }
 

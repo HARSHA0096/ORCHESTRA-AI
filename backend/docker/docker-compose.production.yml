@@ -1,0 +1,38 @@
+# Production gateway deployment.
+# PostgreSQL and Redis are intentionally external services in this compose file.
+# Provide DATABASE_URL and REDIS_URL from the deployment platform's secret store.
+services:
+  gateway:
+    image: ${ORCHESTRA_GATEWAY_IMAGE:-orchestra-ai-gateway:latest}
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3001}:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      HOST: 0.0.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      JWT_EXPIRY: ${JWT_EXPIRY:-15m}
+      JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-7d}
+      API_KEY_SALT: ${API_KEY_SALT:?API_KEY_SALT is required}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      MAX_BODY_SIZE: ${MAX_BODY_SIZE:-1048576}
+      QUEUE_PREFIX: ${QUEUE_PREFIX:-orchestra}
+      DEMO_MODE: "false"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3001/live"]
+      interval: 20s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true

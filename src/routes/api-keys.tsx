@@ -26,11 +26,6 @@ type ApiKey = {
 
 const INITIAL: ApiKey[] = [];
 
-const randomKey = () => {
-  const hex = Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-  return `sk_live_${hex}`;
-};
-
 function ApiKeysPage() {
   const [keys, setKeys] = useState<ApiKey[]>(INITIAL);
   const [show, setShow] = useState<Record<string, boolean>>({});
@@ -60,15 +55,9 @@ function ApiKeysPage() {
 
   const create = (e: React.FormEvent) => {
     e.preventDefault();
-    const name = newName.trim();
-    if (!name) { toast.error("Name is required"); return; }
-    if (keys.some((k) => k.name === name)) { toast.error("Name already exists"); return; }
-    const k: ApiKey = { id: crypto.randomUUID(), name, key: randomKey(), scope: newScope, req: "0", budget: "$0", status: "active" };
-    setKeys((s) => [k, ...s]);
-    setCreateOpen(false);
-    setNewName(""); setNewScope("chat");
-    setReveal({ name: k.name, key: k.key });
-    toast.success("API key created", { description: name });
+    toast.info("Customer API keys are deferred in this release", {
+      description: "Use the authenticated backend project/JWT flow for the current submission.",
+    });
   };
 
   const revoke = (k: ApiKey) => {
@@ -82,15 +71,15 @@ function ApiKeysPage() {
   return (
     <AppShell>
       <PageHero
-        eyebrow="Credentials · Vaulted"
-        title="API Keys"
-        subtitle="Issue scoped virtual keys with per-key budgets, rate limits and audit trails. Rotate or revoke instantly without touching application code."
+        eyebrow="Credentials · Deferred"
+        title="API Key Management"
+        subtitle="Customer API-key issuance is intentionally deferred for this release. The gateway currently uses authenticated project/JWT context."
         accent="var(--neon-violet)"
-        actions={<Btn onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> Create Key</Btn>}
+        actions={<Btn variant="secondary" disabled title="Customer API-key rollout is deferred">Customer API Keys Deferred</Btn>}
       />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Active Keys"   value={String(activeCount)} color="var(--neon-violet)" icon={KeyRound} />
+        <StatCard label="Active Keys"   value="—" delta="Deferred" color="var(--neon-violet)" icon={KeyRound} />
         <StatCard label="Revoked (30d)" value="0" delta="No data" color="var(--neon-red)" />
         <StatCard label="Avg Spend/Key" value="—" delta="Deferred" color="var(--neon-green)" />
         <StatCard label="Rate-Limited" value="0" delta="No data" color="var(--neon-amber)" />

@@ -4,6 +4,7 @@ import { DollarSign, TrendingDown, PiggyBank, Gauge, Pencil } from "lucide-react
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell } from "recharts";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { api, session } from "@/lib/api";
 
 export const Route = createFileRoute("/cost")({
   head: () => ({
@@ -22,11 +23,12 @@ const SEED: Budget[] = [];
 
 function CostPage() {
   const [budgets, setBudgets] = useState<Budget[]>(SEED);
+  const [spend, setSpend] = useState(0);
+  const [modelSpend, setModelSpend] = useState<{ name: string; spend: number; color: string }[]>([]);
   const [editing, setEditing] = useState<Budget | null>(null);
   const [draft, setDraft] = useState(0);
 
-  useEffect(() => { try { const raw = window.localStorage.getItem("orchestra.budgets"); if (raw) setBudgets(JSON.parse(raw)); } catch { /* */ } }, []);
-  useEffect(() => { window.localStorage.setItem("orchestra.budgets", JSON.stringify(budgets)); }, [budgets]);
+  useEffect(() => { if (!session.accessToken || !session.projectId) return; Promise.all([api.get<any>(`/api/v1/projects/${session.projectId}/budget`), api.get<any>(`/api/v1/history?projectId=${encodeURIComponent(session.projectId)}&perPage=100`)]).then(([budget, history]) => { const used = (history ?? []).reduce((sum: number, e: any) => sum + Number(e.cost ?? 0), 0); setSpend(used); const grouped = new Map<string, number>(); (history ?? []).forEach((e: any) => grouped.set(e.modelId ?? "unknown", (grouped.get(e.modelId ?? "unknown") ?? 0) + Number(e.cost ?? 0))); setModelSpend(Array.from(grouped, ([name, value]) => ({ name, spend: value, color: "var(--neon-cyan)" }))); setBudgets(budget ? [{ project: "Current project", used, cap: Number(budget.limitAmount ?? 0) }] : []); }).catch(() => undefined); }, []);
 
   const openEdit = (b: Budget) => { setDraft(b.cap); setEditing(b); };
   const save = () => {
@@ -47,7 +49,7 @@ function CostPage() {
       />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="MTD Spend"        value="$0" delta="No data"  color="var(--neon-green)"  icon={DollarSign} />
+        <StatCard label="MTD Spend"        value={`$${spend.toFixed(4)}`} delta={spend ? "Live" : "No data"}  color="var(--neon-green)"  icon={DollarSign} />
         <StatCard label="Savings (routing)" value="$0" delta="No data" color="var(--neon-cyan)"   icon={PiggyBank} />
         <StatCard label="Cache Savings"    value="$0"  delta="No data"  color="var(--neon-violet)" icon={TrendingDown} />
         <StatCard label="Forecast EoM"     value="—" delta="No data"  color="var(--neon-pink)"   icon={Gauge} />
@@ -55,13 +57,13 @@ function CostPage() {
 
       <Panel eyebrow="Distribution" title="Spend by Model (USD)">
         <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={byModel}>
+          <BarChart data={modelSpend}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis dataKey="name" tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
             <YAxis tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
             <Tooltip contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 8 }} />
             <Bar dataKey="spend" radius={[6, 6, 0, 0]}>
-              {byModel.map((m) => <Cell key={m.name} fill={m.color} />)}
+              {modelSpend.map((m) => <Cell key={m.name} fill={m.color} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>

@@ -1,5 +1,5 @@
 FROM node:22-alpine AS base
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@12.4.1 --activate
 WORKDIR /app
 
 # ── Install dependencies ──
@@ -17,7 +17,7 @@ COPY packages/validation/package.json packages/validation/
 COPY packages/middleware/package.json packages/middleware/
 COPY packages/shared/package.json packages/shared/
 COPY packages/events/package.json packages/events/
-RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm install --frozen-lockfile
 
 # ── Build ──
 FROM deps AS build
@@ -36,6 +36,9 @@ COPY --from=build /app/apps/gateway/package.json ./apps/gateway/
 COPY --from=build /app/packages ./packages
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/package.json ./
+COPY --from=build /app/pnpm-workspace.yaml ./
+
+# Keep the production image deterministic: dependencies were resolved from the lockfile in the build stage.
 
 USER orchestra
 EXPOSE 3001

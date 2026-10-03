@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageHero, Panel, StatCard, Modal, Btn } from "@/components/app-shell";
 import { Shield, ShieldAlert, ShieldCheck, Lock, AlertTriangle, Eye, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { api, session } from "@/lib/api";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/security")({
@@ -30,6 +31,11 @@ function SecurityPage() {
   const [open, setOpen] = useState<Threat | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
 
+  useEffect(() => {
+    if (!session.accessToken || !session.projectId) return;
+    api.get<any>(`/api/v1/security?projectId=${encodeURIComponent(session.projectId)}&perPage=100`).then((items) => setThreats((items ?? []).map((e: any) => ({ id: e.id, type: e.category ?? e.action ?? "Security event", source: e.source ?? "gateway", severity: String(e.severity ?? "medium").toLowerCase() as Threat["severity"], blocked: String(e.action ?? "").toLowerCase().includes("block"), ts: e.createdAt ? new Date(e.createdAt).toLocaleString() : "—" })))).catch(() => undefined);
+  }, []);
+
   const visible = useMemo(() => sev === "all" ? threats : threats.filter((t) => t.severity === sev), [threats, sev]);
 
   const dismiss = (id: string) => {
@@ -52,7 +58,7 @@ function SecurityPage() {
       />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Threats Blocked (24h)" value="0" delta="No data" color="var(--neon-red)" icon={ShieldAlert} />
+        <StatCard label="Threats Blocked (24h)" value={String(threats.filter((t) => t.blocked).length)} delta={threats.length ? "Live" : "No data"} color="var(--neon-red)" icon={ShieldAlert} />
         <StatCard label={`Active Policies`}     value={String(policies.filter((p) => p.enforced).length)} color="var(--neon-violet)" icon={ShieldCheck} />
         <StatCard label="Coverage"              value="—" delta="No data" color="var(--neon-green)" icon={Shield} />
         <StatCard label="Risk Score"            value="—"   delta="No data"   color="var(--neon-cyan)" icon={Lock} />

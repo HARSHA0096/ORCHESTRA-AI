@@ -87,6 +87,39 @@ describe('OpenAIAdapter', () => {
     });
   });
 
+  it('streams a real OpenAI SSE response and preserves final usage', async () => {
+    const sse = [
+      'data: {"id":"chatcmpl-stream","choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+      'data: {"id":"chatcmpl-stream","choices":[{"delta":{"content":" world"},"finish_reason":"stop"}]}\n\n',
+      'data: {"id":"chatcmpl-stream","choices":[],"usage":{"prompt_tokens":8,"completion_tokens":2,"total_tokens":10}}\n\n',
+      'data: [DONE]\n\n',
+    ].join('');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(sse, {
+      status: 200,
+      headers: { 'content-type': 'text/event-stream' },
+    })));
+
+    const chunks = [];
+    for await (const chunk of new OpenAIAdapter().stream({
+      requestId: 'request-stream', correlationId: 'correlation-stream', executionId: 'execution-stream',
+      requestType: 'chat', streaming: true, status: 'received', retryCount: 0, maxRetries: 0,
+      currentStage: 'provider', stages: [], timestamp: new Date().toISOString(), startedAt: Date.now(),
+      executionDurationMs: 0, headers: {}, ipAddress: '127.0.0.1', userAgent: 'test', model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: 'Hello' }], metadata: {}, customMetadata: {},
+    })) chunks.push(chunk);
+
+    expect(chunks.map((chunk) => chunk.content).join('')).toBe('Hello world');
+    expect(chunks.at(-1)).toMatchObject({ provider: 'openai', model: 'gpt-4o-mini', usage: { promptTokens: 8, completionTokens: 2, totalTokens: 10 } });
+    expect(chunks[1]).toMatchObject({ finishReason: 'stop' });
+  });
+
+  it('reports OpenAI health from the real models endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(new OpenAIAdapter().health()).resolves.toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith('https://api.openai.com/v1/models', expect.objectContaining({ headers: { Authorization: 'Bearer test-openai-key' } }));
+  });
+
   it('throws a sanitized timeout error when the OpenAI request times out', async () => {
     const timeoutError = new Error('The operation was aborted');
     (timeoutError as Error & { name?: string }).name = 'AbortError';

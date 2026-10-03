@@ -3,6 +3,7 @@ import { AppShell, PageHero, Panel, StatCard, Modal, Btn } from "@/components/ap
 import { Plug, Plus, CheckCircle2, Settings as SettingsIcon, Search, Activity, AlertTriangle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { api, session } from "@/lib/api";
 
 export const Route = createFileRoute("/providers")({
   head: () => ({
@@ -33,10 +34,7 @@ function ProvidersPage() {
   const [form, setForm] = useState({ name: "", key: "" });
   const [cfg, setCfg] = useState({ key: "", cost: "", enabled: true });
 
-  useEffect(() => {
-    try { const raw = window.localStorage.getItem(STORAGE); if (raw) setProviders(JSON.parse(raw)); } catch { /* */ }
-  }, []);
-  useEffect(() => { window.localStorage.setItem(STORAGE, JSON.stringify(providers)); }, [providers]);
+  useEffect(() => { if (!session.accessToken) return; api.get<any>("/api/v1/providers?perPage=100").then((items) => setProviders((items ?? []).map((p: any) => ({ id: p.id, name: p.displayName ?? p.name, models: Array.isArray(p.models) ? p.models.length : 0, latency: 0, uptime: 0, cost: "—", enabled: p.status === "ACTIVE", color: p.name === "openai" ? "var(--neon-green)" : "var(--neon-cyan)" })))).catch(() => undefined); }, []);
 
   const visible = useMemo(() => providers.filter((p) => p.name.toLowerCase().includes(q.toLowerCase())), [providers, q]);
 

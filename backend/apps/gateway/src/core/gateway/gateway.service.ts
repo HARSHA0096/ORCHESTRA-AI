@@ -111,7 +111,7 @@ export class GatewayService {
 
     let executedContext: ExecutionContext;
     try {
-      executedContext = await retryEngine.execute(async () => this.executionEngine.startExecution(context));
+      executedContext = await retryEngine.execute(async () => this.executionEngine.startExecution(context), 2, 100);
     } catch (error) {
       context.error ??= {
         code: 'GATEWAY_ERROR',

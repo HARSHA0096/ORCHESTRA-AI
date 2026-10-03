@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "types": "./src/index.ts",
   "dependencies": {
     "jsonwebtoken": "^9.0.0",
@@ -13,5 +13,8 @@
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.0"
+  },
+  "scripts": {
+    "build": "tsc"
   }
 }

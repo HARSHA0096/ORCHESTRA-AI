@@ -1,0 +1,10 @@
+{
+  "name": "@orchestra-ai/sdk",
+  "version": "0.1.0",
+  "description": "Minimal JavaScript SDK for the ORCHESTRA AI gateway",
+  "type": "module",
+  "main": "./index.js",
+  "exports": { ".": "./index.js" },
+  "engines": { "node": ">=22" },
+  "license": "MIT"
+}

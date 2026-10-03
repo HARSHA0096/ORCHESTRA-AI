@@ -62,6 +62,8 @@ function getOpenAiRequestTimeoutMs(): number {
   return 30_000;
 }
 
+const OPENAI_API_BASE_URL = 'https://api.openai.com/v1';
+
 function buildMessages(context: ExecutionContext): Array<Record<string, unknown>> {
   const fallbackPrompt = context.prompt ?? context.messages?.at(-1)?.content ?? 'Hello';
 
@@ -112,7 +114,7 @@ export class OpenAIAdapter extends BaseProviderAdapter {
     const timeoutId = setTimeout(() => controller.abort(), getOpenAiRequestTimeoutMs());
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(`${OPENAI_API_BASE_URL}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -189,8 +191,146 @@ export class OpenAIAdapter extends BaseProviderAdapter {
       clearTimeout(timeoutId);
     }
   }
-  async *stream(context: ExecutionContext): AsyncIterable<StreamChunk> { yield* createStubStream(context, this.name, context.resolvedModel ?? 'gpt-4o'); }
-  async health(): Promise<boolean> { return true; }
+  async *stream(context: ExecutionContext): AsyncIterable<StreamChunk> {
+    const apiKey = getOpenAiApiKey();
+    const modelName = context.resolvedModel ?? context.model ?? 'gpt-4o-mini';
+    const startedAt = Date.now();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), getOpenAiRequestTimeoutMs());
+
+    try {
+      const response = await fetch(`${OPENAI_API_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+          Accept: 'text/event-stream',
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages: buildMessages(context),
+          stream: true,
+          stream_options: { include_usage: true },
+          ...(context.temperature !== undefined ? { temperature: context.temperature } : {}),
+          ...(context.maxTokens !== undefined ? { max_tokens: context.maxTokens } : {}),
+          ...(context.topP !== undefined ? { top_p: context.topP } : {}),
+          ...(context.stop ? { stop: context.stop } : {}),
+          ...(context.frequencyPenalty !== undefined ? { frequency_penalty: context.frequencyPenalty } : {}),
+          ...(context.presencePenalty !== undefined ? { presence_penalty: context.presencePenalty } : {}),
+          ...(context.tools ? { tools: context.tools } : {}),
+          ...(context.toolChoice !== undefined ? { tool_choice: context.toolChoice } : {}),
+          ...(context.responseFormat ? { response_format: { type: context.responseFormat === 'json' ? 'json_object' : 'text' } } : {}),
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        let errorMessage = `OpenAI API request failed with status ${response.status}`;
+        try {
+          const errorPayload = await response.json() as { error?: { message?: string } };
+          if (errorPayload?.error?.message) errorMessage = errorPayload.error.message;
+        } catch {
+          // Keep the status fallback for malformed provider errors.
+        }
+        throw sanitizeOpenAiError(response.status, errorMessage);
+      }
+
+      if (!response.body) {
+        throw new OpenAIProviderError(502, 'OPENAI_EMPTY_STREAM', 'OpenAI returned an empty stream.', true);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let index = 0;
+      let finalFinishReason: StreamChunk['finishReason'];
+
+      const emitLine = (line: string): StreamChunk | undefined => {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data:')) return undefined;
+        const payloadText = trimmed.slice(5).trim();
+        if (payloadText === '[DONE]') return undefined;
+
+        const payload = JSON.parse(payloadText) as {
+          id?: string;
+          choices?: Array<{ delta?: { content?: string | null }; finish_reason?: StreamChunk['finishReason'] }>;
+          usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+        };
+        const choice = payload.choices?.[0];
+        const content = choice?.delta?.content ?? '';
+        if (choice?.finish_reason) finalFinishReason = choice.finish_reason;
+
+        const usage = payload.usage ? {
+          promptTokens: payload.usage.prompt_tokens ?? 0,
+          completionTokens: payload.usage.completion_tokens ?? 0,
+          totalTokens: payload.usage.total_tokens ?? (payload.usage.prompt_tokens ?? 0) + (payload.usage.completion_tokens ?? 0),
+        } : undefined;
+
+        return {
+          id: payload.id ?? `chatcmpl-stream-${context.requestId}`,
+          content,
+          provider: this.name,
+          model: modelName,
+          finishReason: choice?.finish_reason,
+          index: index++,
+          timestamp: new Date().toISOString(),
+          ...(usage ? { usage } : {}),
+        };
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          const chunk = emitLine(line);
+          if (chunk) yield chunk;
+        }
+      }
+
+      buffer += decoder.decode();
+      if (buffer.trim()) {
+        const chunk = emitLine(buffer);
+        if (chunk) yield chunk;
+      }
+
+      log.info({ provider: this.name, model: modelName, latencyMs: Date.now() - startedAt, finishReason: finalFinishReason }, 'OpenAI stream completed');
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw new OpenAIProviderError(502, 'OPENAI_INVALID_STREAM', 'OpenAI returned an invalid streaming response.', true);
+      }
+      if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
+        throw new OpenAIProviderError(408, 'OPENAI_TIMEOUT', 'OpenAI request timed out.', true);
+      }
+      if (error instanceof TypeError) {
+        throw new OpenAIProviderError(503, 'OPENAI_NETWORK_ERROR', 'OpenAI network request failed.', true);
+      }
+      if (error instanceof OpenAIProviderError) throw error;
+      throw new OpenAIProviderError(500, 'OPENAI_API_ERROR', error instanceof Error ? error.message : 'OpenAI streaming request failed.', true);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  async health(): Promise<boolean> {
+    const apiKey = getOpenAiApiKey();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5_000);
+    try {
+      const response = await fetch(`${OPENAI_API_BASE_URL}/models`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: controller.signal,
+      });
+      return response.ok;
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
   async models(): Promise<ProviderModelInfo[]> {
     return [
       { id: 'gpt-4o', name: 'GPT-4o', contextWindow: 128000, maxOutputTokens: 16384, inputCostPer1k: 0.005, outputCostPer1k: 0.015, capabilities: ['chat', 'vision', 'tools', 'json'] },

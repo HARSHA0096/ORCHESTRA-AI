@@ -986,12 +986,14 @@ function Footer() {
 /* ---------------- Page ---------------- */
 
 import { AppShell } from "@/components/app-shell";
+import { api, ApiError, session } from "@/lib/api";
 
 function Dashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   useEffect(() => {
     let active = true;
-    fetch('/api/metrics', { cache: 'no-store' }).then((r) => r.ok ? r.json() : null).then((data) => { if (active && data) setMetrics(data as DashboardMetrics); }).catch(() => undefined);
+    if (!session.accessToken) return () => { active = false; };
+    api.get<any>(`/api/v1/metrics?projectId=${encodeURIComponent(session.projectId ?? '')}`).then((data) => { if (!active) return; const total = Number(data.requestCount ?? 0); const failed = Number(data.errorCount ?? 0); setMetrics({ totalRequests: total, successful: Math.max(0, total - failed), failed, recovered: 0, totalCost: Number(data.totalCost ?? 0), avgLatencyMs: Number(data.averageLatencyMs ?? 0), avgTokens: total ? Math.round((Number(data.inputTokens ?? 0) + Number(data.outputTokens ?? 0)) / total) : 0, blockedRequests: 0, activeModels: Array.isArray(data.byProvider) ? data.byProvider.length : 0, recoveryRate: 0, gatewayHealth: total ? ((total - failed) / total) * 100 : 0 }); }).catch((error) => { if (active && error instanceof ApiError && error.status === 401) session.clear(); });
     return () => { active = false; };
   }, []);
   const dashboardKpis = KPIS.map((k) => {

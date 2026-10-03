@@ -249,6 +249,7 @@ export interface StreamChunk {
   finishReason?: 'stop' | 'length' | 'content_filter' | 'tool_calls';
   index: number;
   timestamp: string;
+  usage?: TokenUsage;
 }
 
 export interface StreamOptions {

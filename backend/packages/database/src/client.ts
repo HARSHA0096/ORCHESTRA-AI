@@ -3,6 +3,11 @@ import { logger } from '@orchestra/logger';
 
 const log = logger.child({ module: 'database' });
 
+/**
+ * Prisma 6 no longer supports the legacy Prisma middleware API. Soft-delete
+ * filtering is implemented with a Prisma query extension instead, preserving
+ * the previous behavior for read operations without relying on removed APIs.
+ */
 class Database {
   private client: any;
   private connected = false;

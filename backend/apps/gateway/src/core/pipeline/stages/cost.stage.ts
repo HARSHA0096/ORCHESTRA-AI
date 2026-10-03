@@ -52,7 +52,9 @@ export class CostStage extends BasePipelineStage {
             timestamp: new Date().toISOString(),
             stage: 'cost',
           };
-          throw new Error(context.error.message);
+          const budgetError = new Error(context.error.message);
+          Object.assign(budgetError, { retryable: false, statusCode: 429, errorCode: 'BUDGET_EXCEEDED' });
+          throw budgetError;
         }
 
 

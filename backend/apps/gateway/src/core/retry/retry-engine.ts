@@ -3,8 +3,8 @@ import { prisma } from '@orchestra/database';
 export class RetryEngine {
   async execute<T>(
     operation: () => Promise<T>,
-    retries = 1,
-    delayMs = 50,
+    retries = 2,
+    delayMs = 100,
     fallback?: {
       run: () => Promise<T>;
       requestId?: string;
@@ -20,7 +20,8 @@ export class RetryEngine {
       try {
         return await operation();
       } catch (error) {
-        if (attempt >= retries) {
+        const retryable = (error as { retryable?: boolean } | null)?.retryable;
+        if (retryable !== true || attempt >= retries) {
           if (fallback) {
             const started = Date.now();
             try {
@@ -61,7 +62,9 @@ export class RetryEngine {
           throw error;
         }
         attempt += 1;
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        const exponentialDelay = delayMs * (2 ** (attempt - 1));
+        const jitter = Math.floor(Math.random() * Math.max(1, Math.floor(exponentialDelay * 0.25)));
+        await new Promise((resolve) => setTimeout(resolve, exponentialDelay + jitter));
       }
     }
   }

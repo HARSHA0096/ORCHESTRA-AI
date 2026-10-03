@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageHero, Panel, StatCard, Btn } from "@/components/app-shell";
 import { LifeBuoy, RefreshCw, CheckCircle2, AlertTriangle, Play } from "lucide-react";
 import { useEffect, useState } from "react";
+import { api, session } from "@/lib/api";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/self-healing")({
@@ -25,8 +26,7 @@ function SelfHealingPage() {
   const [events, setEvents] = useState(SEED_EVENTS);
   const [drillRunning, setDrillRunning] = useState(false);
 
-  useEffect(() => { try { const raw = window.localStorage.getItem("orchestra.playbooks"); if (raw) setPlaybooks(JSON.parse(raw)); } catch { /* */ } }, []);
-  useEffect(() => { window.localStorage.setItem("orchestra.playbooks", JSON.stringify(playbooks)); }, [playbooks]);
+  useEffect(() => { if (!session.accessToken || !session.projectId) return; api.get<any>(`/api/v1/recovery?projectId=${encodeURIComponent(session.projectId)}&perPage=100`).then((items) => setEvents((items ?? []).map((e: any) => ({ ts: e.createdAt ? new Date(e.createdAt).toLocaleString() : "—", desc: `${e.failureReason ?? "Recovery event"} · ${e.attempts ?? 0} attempts`, outcome: e.outcome ?? "unknown" })))).catch(() => undefined); }, []);
 
   const togglePlaybook = (t: string) => {
     setPlaybooks((s) => s.map((p) => p.t === t ? { ...p, on: !p.on } : p));

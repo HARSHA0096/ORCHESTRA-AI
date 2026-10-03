@@ -18,6 +18,7 @@ import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ObservabilityRouteImport } from './routes/observability'
 import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as GatewayRouteImport } from './routes/gateway'
 import { Route as CostRouteImport } from './routes/cost'
@@ -73,6 +74,11 @@ const ObservabilityRoute = ObservabilityRouteImport.update({
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoryRoute = HistoryRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/cost': typeof CostRoute
   '/gateway': typeof GatewayRoute
   '/history': typeof HistoryRoute
+  '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/observability': typeof ObservabilityRoute
   '/profile': typeof ProfileRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByTo {
   '/cost': typeof CostRoute
   '/gateway': typeof GatewayRoute
   '/history': typeof HistoryRoute
+  '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/observability': typeof ObservabilityRoute
   '/profile': typeof ProfileRoute
@@ -183,6 +191,7 @@ export interface FileRoutesById {
   '/cost': typeof CostRoute
   '/gateway': typeof GatewayRoute
   '/history': typeof HistoryRoute
+  '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/observability': typeof ObservabilityRoute
   '/profile': typeof ProfileRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/cost'
     | '/gateway'
     | '/history'
+    | '/login'
     | '/notifications'
     | '/observability'
     | '/profile'
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/cost'
     | '/gateway'
     | '/history'
+    | '/login'
     | '/notifications'
     | '/observability'
     | '/profile'
@@ -251,6 +262,7 @@ export interface FileRouteTypes {
     | '/cost'
     | '/gateway'
     | '/history'
+    | '/login'
     | '/notifications'
     | '/observability'
     | '/profile'
@@ -274,6 +286,7 @@ export interface RootRouteChildren {
   CostRoute: typeof CostRoute
   GatewayRoute: typeof GatewayRoute
   HistoryRoute: typeof HistoryRoute
+  LoginRoute: typeof LoginRoute
   NotificationsRoute: typeof NotificationsRoute
   ObservabilityRoute: typeof ObservabilityRoute
   ProfileRoute: typeof ProfileRoute
@@ -352,6 +365,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/history': {
@@ -453,6 +473,7 @@ const rootRouteChildren: RootRouteChildren = {
   CostRoute: CostRoute,
   GatewayRoute: GatewayRoute,
   HistoryRoute: HistoryRoute,
+  LoginRoute: LoginRoute,
   NotificationsRoute: NotificationsRoute,
   ObservabilityRoute: ObservabilityRoute,
   ProfileRoute: ProfileRoute,

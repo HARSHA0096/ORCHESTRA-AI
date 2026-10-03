@@ -3,6 +3,7 @@ import { AppShell, PageHero, Panel, StatCard } from "@/components/app-shell";
 import { Radar, Activity, Eye, TerminalSquare, Search, Pause, Play } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api, session } from "@/lib/api";
 
 export const Route = createFileRoute("/observability")({
   head: () => ({
@@ -30,12 +31,15 @@ const lvlColor = (lvl: string) => lvl === "error" ? "var(--neon-red)" : lvl === 
 
 function ObsPage() {
   const [range, setRange] = useState<RangeKey>("1h");
-  const latency = useMemo(() => buildLatency(RANGES[range]), [range]);
+  const [remote, setRemote] = useState<any>({ p50: 0, p95: 0, p99: 0, sampleSize: 0, traces: [] });
+  const latency = useMemo(() => remote.sampleSize ? [{ t: 0, p50: remote.p50, p95: remote.p95, p99: remote.p99 }] : [], [remote]);
   const [logs, setLogs] = useState<Log[]>(() => SAMPLE_MSGS.map((m, i) => ({ ...m, ts: stamp(-i * 50) })));
   const [lvlFilter, setLvlFilter] = useState<"all" | Log["lvl"]>("all");
   const [q, setQ] = useState("");
   const [paused, setPaused] = useState(false);
   const idx = useRef(0);
+
+  useEffect(() => { if (!session.accessToken || !session.projectId) return; api.get<any>(`/api/v1/observability?projectId=${encodeURIComponent(session.projectId)}`).then((data) => { setRemote(data); setLogs((data.traces ?? []).map((t: any) => ({ ts: t.createdAt ? new Date(t.createdAt).toLocaleString() : "—", lvl: t.status === "SUCCESS" ? "info" : "error", msg: `${t.endpoint ?? "request"} · ${t.modelId ?? "unknown"} · ${t.latencyMs ?? 0}ms` }))); }).catch(() => undefined); }, [range]);
 
   useEffect(() => {
     if (paused) return;
@@ -68,8 +72,8 @@ function ObsPage() {
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Spans / sec"   value="0" delta="No data"  color="var(--neon-cyan)"   icon={Radar} />
-        <StatCard label="P95 Latency"   value="—" delta="No data" color="var(--neon-green)"  icon={Activity} />
-        <StatCard label="Active Traces" value="0"   delta="No data"   color="var(--neon-violet)" icon={Eye} />
+        <StatCard label="P95 Latency"   value={remote.sampleSize ? `${remote.p95}ms` : "—"} delta={remote.sampleSize ? "Live" : "No data"} color="var(--neon-green)"  icon={Activity} />
+        <StatCard label="Active Traces" value={String(remote.sampleSize)}   delta={remote.sampleSize ? "Live" : "No data"}   color="var(--neon-violet)" icon={Eye} />
         <StatCard label="Logs / min"    value="0" delta="No data"   color="var(--neon-pink)"   icon={TerminalSquare} />
       </section>
 

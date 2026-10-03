@@ -56,6 +56,7 @@ export class ProviderStage extends BasePipelineStage {
         // For streaming, collect chunks into a full response
         let fullContent = '';
         let chunkCount = 0;
+        let streamUsage: { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
 
         middlewareEventBus.emit('streaming.started', {
           ...MiddlewareEventBus.createBasePayload(context),
@@ -66,6 +67,7 @@ export class ProviderStage extends BasePipelineStage {
         for await (const chunk of adapter.stream(context)) {
           fullContent += chunk.content;
           chunkCount++;
+          if (chunk.usage) streamUsage = chunk.usage;
           context.onStreamChunk?.(chunk);
         }
 
@@ -84,7 +86,7 @@ export class ProviderStage extends BasePipelineStage {
           provider: providerName,
           model: modelName,
           finishReason: 'stop',
-          usage: {
+          usage: streamUsage ?? {
             promptTokens: context.promptMetadata?.promptTokenEstimate ?? 0,
             completionTokens: Math.max(1, Math.ceil(fullContent.length / 4)),
             totalTokens: (context.promptMetadata?.promptTokenEstimate ?? 0) + Math.max(1, Math.ceil(fullContent.length / 4)),
