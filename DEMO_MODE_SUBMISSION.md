@@ -57,10 +57,10 @@ Frontend `.env` for local development:
 
 ```env
 VITE_DEMO_MODE=true
-VITE_BACKEND_URL=http://localhost:3001
-
-For a hosted frontend, set `VITE_BACKEND_URL` to the deployed gateway URL. If it is unavailable and `VITE_DEMO_MODE=true`, the frontend uses its built-in demo response and records a local demo-session event so Dashboard/History remain demonstrable.
+VITE_API_URL=http://localhost:3001
 ```
+
+For a hosted frontend, set `VITE_API_URL` to the deployed gateway URL. If it is unavailable and `VITE_DEMO_MODE=true`, the frontend uses its built-in demo response and records a local demo-session event so Dashboard/History remain demonstrable.
 
 ## Demo request
 

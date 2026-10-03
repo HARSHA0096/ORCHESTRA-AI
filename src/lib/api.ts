@@ -1,4 +1,4 @@
-export const API_BASE_URL = ((import.meta.env.VITE_API_URL as string | undefined) || (import.meta.env.DEV ? "http://localhost:3001" : "")).replace(/\/+$/, "");
+export const API_BASE_URL = ((import.meta.env.VITE_API_URL as string | undefined) || (import.meta.env.VITE_BACKEND_URL as string | undefined) || (import.meta.env.DEV ? "http://localhost:3001" : "")).replace(/\/+$/, "");
 
 const ACCESS_KEY = "orchestra.accessToken";
 const REFRESH_KEY = "orchestra.refreshToken";
