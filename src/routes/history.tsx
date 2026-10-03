@@ -46,13 +46,16 @@ function HistoryPage() {
   const [details, setDetails] = useState<Row | null>(null);
   const [rows, setRows] = useState<Row[]>(ROWS);
   const [total, setTotal] = useState(0);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     if (!session.accessToken || !session.projectId) return () => { active = false; };
     api.get<any>(`/api/v1/history?projectId=${encodeURIComponent(session.projectId)}&page=1&perPage=100`)
       .then((payload) => { if (!active) return; setTotal(Number(payload?.length ?? 0)); setRows((payload ?? []).map((item: any) => ({ id: item.requestId ?? item.id, model: item.modelId ?? 'unknown', tokens: (item.inputTokens ?? 0) + (item.outputTokens ?? 0), latency: item.latencyMs ?? 0, cost: Number(item.cost ?? 0).toFixed(6), status: item.status === 'FAILED' ? 'blocked' : item.status === 'RECOVERED' ? 'recovered' : item.status === 'ROUTED' ? 'routed' : 'completed', ts: item.createdAt ? new Date(item.createdAt).toLocaleString() : '—' }))); })
-      .catch(() => undefined);
+      .catch((error) => { if (active) setError(error instanceof Error ? error.message : "Unable to load request history."); })
+      .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
 
@@ -119,7 +122,8 @@ function HistoryPage() {
           </div>
         }
       >
-        {pageRows.length === 0 ? (
+        {error && <div role="alert" className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">Unable to load request history: {error}</div>}
+        {loading ? <div role="status" className="py-8 text-center text-sm text-muted-foreground">Loading request history…</div> : pageRows.length === 0 ? (
           <div className="rounded-lg border border-dashed border-white/10 px-4 py-12 text-center">
             <HistoryIcon className="mx-auto h-8 w-8 text-muted-foreground/60" />
             <div className="mt-3 font-display text-sm font-medium">No requests match your filters</div>

@@ -3,13 +3,14 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Bell, Boxes, ChevronLeft, ChevronsUpDown, Command, Gauge,
   History, KeyRound, LayoutDashboard, LifeBuoy, LineChart as LineIcon,
-  Moon, Network, Plug, Radar, Router as RouterIcon, Search, Settings,
+  Moon, Network, Plug, Radar, Router as RouterIcon, Search, Settings, LogOut,
   Shield, Sparkles, Sun, User, BellRing, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 import { AmbientField } from "@/components/ambient-field";
 import { PageTransition, springSnappy, springSoft, EASE } from "@/lib/motion";
+import { API_BASE_URL, logout, session } from "@/lib/api";
 
 export type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
@@ -154,13 +155,10 @@ function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCollapsed
       <div className="mt-3 space-y-2 border-t border-white/5 pt-3">
         {!collapsed ? (
           <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.03] px-3 py-2">
-            <span className="relative inline-flex h-2 w-2 shrink-0">
-              <span className="absolute inset-0 animate-ping rounded-full bg-[var(--neon-green)] opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--neon-green)]" />
-            </span>
+            <span className="relative inline-flex h-2 w-2 shrink-0"><span className="relative inline-flex h-2 w-2 rounded-full bg-muted-foreground" /></span>
             <div className="min-w-0 flex-1 leading-tight">
-              <div className="text-[12px] font-medium">All systems</div>
-              <div className="truncate text-[11px] text-muted-foreground">operational</div>
+              <div className="text-[12px] font-medium">Gateway health</div>
+              <div className="truncate text-[11px] text-muted-foreground">See current status in the header</div>
             </div>
           </div>
         ) : (
@@ -259,8 +257,20 @@ function TopBar() {
   const [q, setQ] = useState("");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [dark, setDark] = useState(true);
+  const [health, setHealth] = useState<"Unknown" | "Operational" | "Degraded" | "Offline">("Unknown");
   const navigate = useNavigate();
   const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    const check = async () => {
+      if (!API_BASE_URL) { if (active) setHealth("Unknown"); return; }
+      try { const response = await fetch(`${API_BASE_URL}/health`, { cache: "no-store" }); const data = response.ok ? await response.json() : null; if (active) setHealth(data?.status === "healthy" ? "Operational" : data?.status === "degraded" ? "Degraded" : data?.status === "unhealthy" ? "Offline" : "Unknown"); }
+      catch { if (active) setHealth("Offline"); }
+    };
+    void check(); const timer = window.setInterval(check, 30000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -336,12 +346,11 @@ function TopBar() {
 
         {/* Right side */}
         <div className="flex shrink-0 items-center gap-2">
-          <span className="hidden items-center gap-2 rounded-full border border-[var(--neon-green)]/30 bg-[oklch(0.85_0.21_155/0.10)] px-3 py-1.5 text-xs font-medium text-[var(--neon-green)] sm:flex">
+          <span className={`hidden items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium sm:flex ${health === "Operational" ? "border-[var(--neon-green)]/30 bg-[oklch(0.85_0.21_155/0.10)] text-[var(--neon-green)]" : health === "Degraded" ? "border-[var(--neon-amber)]/30 bg-[oklch(0.83_0.17_80/0.10)] text-[var(--neon-amber)]" : "border-white/10 bg-white/[0.04] text-muted-foreground"}`}>
             <span className="relative inline-flex h-2 w-2">
-              <span className="absolute inset-0 animate-ping rounded-full bg-[var(--neon-green)] opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--neon-green)]" />
+              <span className={`relative inline-flex h-2 w-2 rounded-full ${health === "Operational" ? "bg-[var(--neon-green)]" : health === "Degraded" ? "bg-[var(--neon-amber)]" : "bg-muted-foreground"}`} />
             </span>
-            Operational
+            {health}
           </span>
 
           <button onClick={toggleTheme} className="grid h-9 w-9 place-items-center rounded-lg bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground" aria-label="Toggle theme" title="Toggle theme">
@@ -350,8 +359,8 @@ function TopBar() {
 
           <Link to="/notifications" className="relative grid h-9 w-9 place-items-center rounded-lg bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground" aria-label="Notifications">
             <Bell className="h-4 w-4" />
-            <span className="absolute -right-0.5 -top-0.5 grid h-4 w-4 place-items-center rounded-full bg-[var(--neon-pink)] text-[9px] font-semibold text-[oklch(0.16_0.04_270)]">12</span>
           </Link>
+          <button onClick={() => void logout().catch((error) => toast.error(error instanceof Error ? error.message : "Unable to contact the server; your local session was cleared")).finally(() => navigate({ to: "/login" }))} className="grid h-9 w-9 place-items-center rounded-lg bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground" aria-label="Log out" title="Log out"><LogOut className="h-4 w-4" /></button>
 
           <Link to="/profile" aria-label="Profile"
                 className="grid h-9 w-9 place-items-center rounded-full font-display text-[11px] font-bold text-[oklch(0.16_0.04_270)] ring-1 ring-white/10 hover:brightness-110"
@@ -366,6 +375,19 @@ function TopBar() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+  const href = useRouterState({ select: (s) => s.location.href });
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [authenticated, setAuthenticated] = useState(() => Boolean(session.accessToken));
+  useEffect(() => {
+    const sync = () => setAuthenticated(Boolean(session.accessToken));
+    window.addEventListener("orchestra-session", sync);
+    sync();
+    return () => window.removeEventListener("orchestra-session", sync);
+  }, []);
+  useEffect(() => {
+    if (!authenticated && pathname !== "/login" && pathname !== "/register") void navigate({ to: "/login", search: { redirect: href } as never, replace: true });
+  }, [authenticated, href, navigate, pathname]);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("orchestra.sidebar.collapsed") === "1";
@@ -375,8 +397,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     window.localStorage.setItem("orchestra.sidebar.collapsed", collapsed ? "1" : "0");
   }, [collapsed]);
 
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-
+  if (!authenticated) return <main className="grid min-h-screen place-items-center bg-background text-sm text-muted-foreground">Redirecting to sign in…</main>;
   return (
     <div className="dark relative min-h-screen text-foreground">
       <AmbientField />

@@ -29,7 +29,7 @@ export const Route = createFileRoute("/")({
 
 /* ---------------- Data-driven dashboard ---------------- */
 
-const SIDEBAR_ITEMS = [
+const SIDEBAR_ITEMS: Array<{ icon: typeof Activity; label: string; shortcut?: string; active?: boolean; badge?: string }> = [
   { icon: LayoutDashboard, label: "Dashboard", shortcut: "⌘1", active: true },
   { icon: Boxes,           label: "Projects",     shortcut: "⌘2" },
   { icon: Network,         label: "Gateway",      shortcut: "⌘3" },
@@ -69,7 +69,7 @@ const KPIS = [
   { label: "Blocked Requests", value: 0, delta: "No data", suffix: "", icon: ShieldAlert, color: "var(--neon-pink)" },
   { label: "Avg Latency",      value: 0, delta: "No data", suffix: "ms", icon: Zap, color: "var(--neon-cyan)" },
   { label: "Avg Tokens",       value: 0, delta: "No data", suffix: "", icon: Brain, color: "var(--neon-violet)" },
-  { label: "Active Models",    value: 0, delta: "No data", suffix: "", icon: Cpu, color: "var(--neon-pink)" },
+  { label: "Active Providers", value: 0, delta: "No data", suffix: "", icon: Cpu, color: "var(--neon-pink)" },
   { label: "Recovery Rate",    value: 0, delta: "No data", suffix: "%", icon: LifeBuoy, color: "var(--neon-green)" },
   { label: "Gateway Health",   value: 0, delta: "No data", suffix: "%", icon: Network, color: "var(--neon-violet)" },
 ];
@@ -85,7 +85,7 @@ const WORKFLOW_NODES = [
   { id: "sec",    label: "Security",     sub: "Threat Filter",icon: Shield,         color: "var(--neon-pink)" },
   { id: "cost",   label: "Cost Intel",   sub: "Budget Guard", icon: Gauge,          color: "var(--neon-amber)" },
   { id: "router", label: "Model Router", sub: "Smart Select", icon: RouterIcon,     color: "var(--neon-violet)" },
-  { id: "model",  label: "AI Model",     sub: "GPT-4o",       icon: Brain,          color: "var(--neon-green)" },
+  { id: "model",  label: "AI Model",     sub: "Selected by gateway", icon: Brain, color: "var(--neon-green)" },
   { id: "heal",   label: "Self-Healing", sub: "Retry / Fallback", icon: LifeBuoy,   color: "var(--neon-cyan)" },
   { id: "resp",   label: "Response",     sub: "Streamed",     icon: Sparkles,       color: "var(--neon-pink)" },
 ];
@@ -175,7 +175,7 @@ function KpiCard({ k, idx }: { k: typeof KPIS[number]; idx: number }) {
         <div>
           <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{k.label}</div>
           <div className="mt-1 font-display text-2xl font-semibold tabular-nums text-foreground">
-            {fmt(val, k.prefix ?? "", k.suffix ?? "")}
+            {k.delta === "No data" ? "—" : fmt(val, k.prefix ?? "", k.suffix ?? "")}
           </div>
         </div>
         <div
@@ -353,16 +353,14 @@ function Hero() {
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[var(--neon-cyan)]">
             <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-[var(--neon-cyan)] text-[var(--neon-cyan)]" />
-            Mission Status — All Systems Operational
+            Mission Status — Gateway health shown in the status indicator
           </div>
           <h1 className="mt-3 font-display text-3xl font-semibold leading-tight tracking-tight md:text-5xl">
             <span className="text-gradient">ORCHESTRA AI</span>
             <span className="ml-3 text-foreground/70 text-base font-normal md:text-lg">/ ORCHESTRA · Demo</span>
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground md:text-base">
-            Welcome back, Jane. Your AI ecosystem processed <span className="font-mono text-foreground">24,786</span> requests today,
-            blocked <span className="font-mono text-[var(--neon-pink)]">134</span> threats, and saved
-            <span className="font-mono text-[var(--neon-green)]"> $1,283.19</span> through smart routing.
+            Live operational metrics appear here when telemetry is available for the selected project.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -417,6 +415,8 @@ function TrendChart() {
         </div>
       </div>
       <div className="h-64 w-full">
+        {trendData.length === 0 && <div className="grid h-full place-items-center text-sm text-muted-foreground">No telemetry available yet.</div>}
+        {trendData.length > 0 &&
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={trendData} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
             <defs>
@@ -440,7 +440,7 @@ function TrendChart() {
             <Area type="monotone" dataKey="requests" stroke="var(--neon-violet)" strokeWidth={2} fill="url(#gReq)" />
             <Area type="monotone" dataKey="cost"     stroke="var(--neon-cyan)"   strokeWidth={2} fill="url(#gCost)" />
           </AreaChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer>}
       </div>
       <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[var(--neon-violet)]" /> Requests</span>
@@ -474,8 +474,8 @@ function ModelUsage() {
           </ResponsiveContainer>
           <div className="pointer-events-none absolute inset-0 grid place-items-center">
             <div className="text-center">
-              <div className="font-display text-xl font-semibold tabular-nums">{total.toLocaleString()}%</div>
-              <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Total Mix</div>
+              <div className="font-display text-xl font-semibold tabular-nums">{total ? `${total.toLocaleString()}%` : "—"}</div>
+              <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{total ? "Total Mix" : "No usage data"}</div>
             </div>
           </div>
         </div>
@@ -592,10 +592,7 @@ function WorkflowGraph() {
             <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[var(--neon-pink)]" /> Recovery</span>
           </div>
           <div className="flex items-center gap-2 font-mono">
-            <span>req_84a2c1</span><span className="text-muted-foreground/60">·</span>
-            <span className="text-[var(--neon-green)]">412ms</span>
-            <span className="text-muted-foreground/60">·</span>
-            <span>GPT-4o</span>
+            <span>No request selected</span><span className="text-muted-foreground/60">·</span><span>—</span>
           </div>
         </div>
       </div>
@@ -631,6 +628,7 @@ function LiveRequests() {
         </select>
       </div>
       <ul className="flex-1 space-y-2 overflow-y-auto pr-1">
+        {requests.length === 0 && <li className="py-8 text-center text-sm text-muted-foreground">No activity yet.</li>}
         {requests.map((r, i) => {
           const t = statusTone(r.status);
           return (
@@ -694,6 +692,7 @@ function SystemHealth() {
         </div>
       </div>
       <ul className="grid grid-cols-1 gap-1.5 text-sm sm:grid-cols-2">
+        {SYSTEM_HEALTH.length === 0 && <li className="col-span-full py-5 text-center text-sm text-muted-foreground">Provider health data is unavailable.</li>}
         {SYSTEM_HEALTH.map((c) => (
           <li key={c.name} className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] px-2.5 py-1.5">
             <span className="flex items-center gap-2 text-foreground/85">
@@ -734,10 +733,10 @@ function CostIntelligence() {
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
-          { l: "Daily Spend", v: "$482.43", c: "var(--neon-amber)" },
-          { l: "Monthly",     v: "$11,420", c: "var(--neon-violet)" },
-          { l: "Saved",       v: "$1,283",  c: "var(--neon-green)" },
-          { l: "Budget Used", v: "62%",     c: "var(--neon-cyan)" },
+          { l: "Daily Spend", v: "—", c: "var(--neon-amber)" },
+          { l: "Monthly",     v: "—", c: "var(--neon-violet)" },
+          { l: "Saved",       v: "—", c: "var(--neon-green)" },
+          { l: "Budget Used", v: "—", c: "var(--neon-cyan)" },
         ].map((s) => (
           <div key={s.l} className="rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2">
             <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{s.l}</div>
@@ -775,8 +774,8 @@ function SecurityCenter() {
           </div>
           <h3 className="font-display text-base font-semibold">Live Threat Monitor</h3>
         </div>
-        <div className="rounded-md border border-[var(--neon-amber)]/40 bg-[oklch(0.83_0.17_80/0.12)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--neon-amber)]">
-          Threat Level: Low
+          <div className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+          Threat Level: Unknown
         </div>
       </div>
       <div className="relative grid grid-cols-[120px_minmax(0,1fr)] items-center gap-4">
@@ -784,12 +783,12 @@ function SecurityCenter() {
           <svg viewBox="0 0 120 120" className="h-28 w-28 -rotate-90">
             <circle cx="60" cy="60" r="48" stroke="oklch(1 0 0 / 0.08)" strokeWidth="8" fill="none" />
             <circle cx="60" cy="60" r="48" stroke="var(--neon-pink)" strokeWidth="8" fill="none"
-                    strokeLinecap="round" strokeDasharray="120 301.5"
+                    strokeLinecap="round" strokeDasharray="0 301.5"
                     style={{ filter: "drop-shadow(0 0 8px var(--neon-pink))" }} />
           </svg>
           <div className="absolute inset-0 grid place-items-center text-center">
             <div>
-              <div className="font-display text-2xl font-semibold text-[var(--neon-pink)]">134</div>
+              <div className="font-display text-2xl font-semibold text-[var(--neon-pink)]">—</div>
               <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Blocked</div>
             </div>
           </div>
@@ -883,7 +882,7 @@ function ProviderStatus() {
         </div>
         <button className="text-xs text-muted-foreground hover:text-foreground">View all →</button>
       </div>
-      <StaggerGroup className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      {PROVIDERS.length === 0 ? <div className="py-6 text-center text-sm text-muted-foreground">Provider health data is unavailable.</div> : <StaggerGroup className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {PROVIDERS.map((p) => (
           <StaggerItem key={p.name} className="group relative overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] p-3 transition-all hover:-translate-y-0.5 hover:border-white/10">
             <div className="absolute inset-x-0 -top-px h-px" style={{ background: `linear-gradient(90deg, transparent, ${p.color}, transparent)` }} />
@@ -925,7 +924,7 @@ function ProviderStatus() {
             </div>
           </StaggerItem>
         ))}
-      </StaggerGroup>
+      </StaggerGroup>}
     </div>
   );
 }
@@ -940,9 +939,10 @@ function ActivityTimeline() {
           </div>
           <h3 className="font-display text-base font-semibold">Activity Stream</h3>
         </div>
-        <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">Live</span>
+        <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">Telemetry</span>
       </div>
       <ol className="relative ml-2 flex-1 space-y-3 overflow-y-auto border-l border-white/10 pl-4 pr-1">
+        {TIMELINE.length === 0 && <li className="py-8 text-sm text-muted-foreground">No activity recorded yet.</li>}
         {TIMELINE.map((e, i) => {
           const c = e.kind === "security" ? "var(--neon-pink)"
                  : e.kind === "route"    ? "var(--neon-violet)"
@@ -976,7 +976,7 @@ function Footer() {
         <span>Telemetry from the active demo session</span>
       </div>
       <div className="flex items-center gap-2">
-        <span className="rounded-md bg-[oklch(0.85_0.21_155/0.12)] px-1.5 py-0.5 text-[var(--neon-green)]">API · Operational</span>
+        <span className="rounded-md bg-white/5 px-1.5 py-0.5">API · Status shown above</span>
         <span className="rounded-md bg-white/5 px-1.5 py-0.5 uppercase tracking-wider">Demo</span>
       </div>
     </footer>
@@ -986,28 +986,37 @@ function Footer() {
 /* ---------------- Page ---------------- */
 
 import { AppShell } from "@/components/app-shell";
-import { api, ApiError, session } from "@/lib/api";
+import { api, ApiError, ensureProject, session } from "@/lib/api";
 
 function Dashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [metricsError, setMetricsError] = useState("");
+  const [metricsLoading, setMetricsLoading] = useState(true);
   useEffect(() => {
     let active = true;
-    if (!session.accessToken) return () => { active = false; };
-    api.get<any>(`/api/v1/metrics?projectId=${encodeURIComponent(session.projectId ?? '')}`).then((data) => { if (!active) return; const total = Number(data.requestCount ?? 0); const failed = Number(data.errorCount ?? 0); setMetrics({ totalRequests: total, successful: Math.max(0, total - failed), failed, recovered: 0, totalCost: Number(data.totalCost ?? 0), avgLatencyMs: Number(data.averageLatencyMs ?? 0), avgTokens: total ? Math.round((Number(data.inputTokens ?? 0) + Number(data.outputTokens ?? 0)) / total) : 0, blockedRequests: 0, activeModels: Array.isArray(data.byProvider) ? data.byProvider.length : 0, recoveryRate: 0, gatewayHealth: total ? ((total - failed) / total) * 100 : 0 }); }).catch((error) => { if (active && error instanceof ApiError && error.status === 401) session.clear(); });
+    if (!session.accessToken) { setMetricsLoading(false); return () => { active = false; }; }
+    void ensureProject().then((projectId) => {
+      if (!projectId) throw new Error("Select or create a project to view dashboard metrics.");
+      return api.get<any>(`/api/v1/metrics?projectId=${encodeURIComponent(projectId)}`);
+    }).then((data) => { if (!active) return; const total = Number(data.requestCount ?? 0); const failed = Number(data.errorCount ?? 0); setMetrics({ totalRequests: total, successful: Math.max(0, total - failed), failed, recovered: 0, totalCost: Number(data.totalCost ?? 0), avgLatencyMs: Number(data.averageLatencyMs ?? 0), avgTokens: total ? Math.round((Number(data.inputTokens ?? 0) + Number(data.outputTokens ?? 0)) / total) : 0, blockedRequests: 0, activeModels: Array.isArray(data.byProvider) ? data.byProvider.length : 0, recoveryRate: 0, gatewayHealth: total ? ((total - failed) / total) * 100 : 0 }); })
+      .catch((error) => { if (!active) return; if (error instanceof ApiError && error.status === 401) session.clear(); setMetricsError(error instanceof Error ? error.message : "Unable to load metrics. Check gateway connection."); })
+      .finally(() => { if (active) setMetricsLoading(false); });
     return () => { active = false; };
   }, []);
   const dashboardKpis = KPIS.map((k) => {
     if (!metrics) return k;
     const values: Record<string, number> = {
-      'Total Requests': metrics.totalRequests, 'Successful': metrics.successful, 'Failed': metrics.failed, 'Recovered': metrics.recovered,
-      "Today's Cost": metrics.totalCost, 'Money Saved': 0, 'Blocked Requests': metrics.blockedRequests, 'Avg Latency': metrics.avgLatencyMs,
-      'Avg Tokens': metrics.avgTokens, 'Active Models': metrics.activeModels, 'Recovery Rate': metrics.recoveryRate, 'Gateway Health': metrics.gatewayHealth,
+      'Total Requests': metrics.totalRequests, 'Successful': metrics.successful, 'Failed': metrics.failed,
+      "Today's Cost": metrics.totalCost, 'Avg Latency': metrics.avgLatencyMs, 'Avg Tokens': metrics.avgTokens, 'Active Providers': metrics.activeModels,
     };
-    return { ...k, value: values[k.label] ?? 0, delta: metrics.totalRequests ? 'Live' : 'No data' };
+    return k.label in values ? { ...k, value: values[k.label], delta: metrics.totalRequests ? 'Live' : 'No data' } : k;
   });
   return (
     <AppShell>
       <Hero />
+      {metricsLoading && <div role="status" className="glass-panel p-3 text-sm text-muted-foreground">Loading metrics…</div>}
+      {metricsError && <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">Unable to load metrics. {metricsError}</div>}
+      {metrics && metrics.totalRequests === 0 && <div className="glass-panel p-3 text-sm text-muted-foreground">No activity yet.</div>}
 
       {/* KPI grid */}
       <section aria-label="Key metrics" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
@@ -1043,4 +1052,3 @@ function Dashboard() {
     </AppShell>
   );
 }
-

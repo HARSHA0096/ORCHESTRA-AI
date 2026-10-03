@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { ApiError, bootstrapWorkspace, login, register } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ export const Route = createFileRoute("/login")({ component: LoginPage });
 
 function LoginPage() {
   const navigate = useNavigate();
+  const search = useSearch({ from: "/login" }) as { redirect?: string };
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,7 +22,7 @@ function LoginPage() {
     try {
       if (mode === "login") await login(email, password);
       else { await register({ email, password, firstName, lastName }); await bootstrapWorkspace(workspace); }
-      navigate({ to: "/" });
+      navigate({ to: search.redirect?.startsWith("/") ? search.redirect : "/" } as never);
     } catch (err) { setError(err instanceof ApiError ? err.message : "Unable to authenticate"); }
     finally { setBusy(false); }
   }
@@ -35,7 +36,7 @@ function LoginPage() {
       <input required minLength={8} type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password" className="h-10 w-full rounded-md border border-white/10 bg-white/[.03] px-3 text-sm"/>
       {error && <div className="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>}
       <Button disabled={busy} className="w-full">{busy ? "Working…" : mode === "login" ? "Sign in" : "Create workspace"}</Button>
-      <button type="button" onClick={()=>setMode(mode === "login" ? "register" : "login")} className="w-full text-xs text-muted-foreground hover:text-foreground">{mode === "login" ? "Need an account? Create one" : "Already have an account? Sign in"}</button>
+      {mode === "login" ? <Link to="/register" className="block w-full text-center text-xs text-muted-foreground hover:text-foreground">Need an account? Create one</Link> : <Link to="/login" className="block w-full text-center text-xs text-muted-foreground hover:text-foreground">Already have an account? Sign in</Link>}
     </form>
   </main>;
 }

@@ -21,25 +21,25 @@ type Section = { icon: typeof SettingsIcon; title: string; items: Field[] };
 
 const DEFAULTS: Section[] = [
   { icon: SettingsIcon, title: "Workspace", items: [
-    { l: "Organization name", v: "ORCHESTRA Demo" },
-    { l: "Default environment", v: "Production" },
-    { l: "Data retention", v: "90 days" },
+    { l: "Organization name", v: "Not configured" },
+    { l: "Default environment", v: "Not configured" },
+    { l: "Data retention", v: "Not configured" },
   ]},
   { icon: Shield, title: "Security", items: [
-    { l: "Enforce SSO (SAML)", t: true },
-    { l: "Require MFA for admins", t: true },
-    { l: "IP allowlist", v: "3 ranges" },
-    { l: "Audit log export", t: true },
+    { l: "Enforce SSO (SAML)", v: "Not configured" },
+    { l: "Require MFA for admins", v: "Not configured" },
+    { l: "IP allowlist", v: "Not configured" },
+    { l: "Audit log export", v: "Not configured" },
   ]},
   { icon: Bell, title: "Notifications", items: [
-    { l: "Security alerts → email", t: true },
-    { l: "Cost thresholds → Slack", t: true },
-    { l: "Provider degradations → PagerDuty", t: false },
+    { l: "Security alerts → email", v: "Not configured" },
+    { l: "Cost thresholds → Slack", v: "Not configured" },
+    { l: "Provider degradations → PagerDuty", v: "Not configured" },
   ]},
   { icon: Globe2, title: "Regions & Residency", items: [
-    { l: "Primary region", v: "us-east-1" },
-    { l: "EU residency for EU traffic", t: true },
-    { l: "Edge caching", t: true },
+    { l: "Primary region", v: "Not configured" },
+    { l: "EU residency for EU traffic", v: "Not configured" },
+    { l: "Edge caching", v: "Not configured" },
   ]},
   { icon: Moon, title: "Appearance", items: [
     { l: "Theme", v: "Dark · Mission Control" },
@@ -70,7 +70,7 @@ function SettingsPage() {
       try {
         const parsed = JSON.parse(saved);
         // re-attach icons (lost in JSON)
-        const merged = DEFAULTS.map((d, i) => ({ ...d, items: parsed[i]?.items ?? d.items }));
+        const merged = DEFAULTS.map((d, i) => ({ ...d, items: d.title === "Appearance" ? parsed[i]?.items ?? d.items : d.items }));
         setSections(merged);
         original.current = JSON.stringify(merged);
       } catch { /* ignore */ }
@@ -139,7 +139,7 @@ function SettingsPage() {
                     <span className="text-muted-foreground">{it.l}</span>
                     {"t" in it
                       ? <Toggle on={it.t} onChange={(v) => toggle(si, ii, v)} />
-                      : <button onClick={() => openEdit(si, ii)}
+                      : <button onClick={() => openEdit(si, ii)} disabled={s.title !== "Appearance"}
                                 className="rounded-md px-2 py-0.5 font-mono text-[12.5px] hover:bg-white/5">
                           {it.v}
                         </button>}

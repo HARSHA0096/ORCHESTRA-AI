@@ -25,8 +25,9 @@ function SelfHealingPage() {
   const [playbooks, setPlaybooks] = useState<Playbook[]>(PLAYBOOKS_SEED);
   const [events, setEvents] = useState(SEED_EVENTS);
   const [drillRunning, setDrillRunning] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
-  useEffect(() => { if (!session.accessToken || !session.projectId) return; api.get<any>(`/api/v1/recovery?projectId=${encodeURIComponent(session.projectId)}&perPage=100`).then((items) => setEvents((items ?? []).map((e: any) => ({ ts: e.createdAt ? new Date(e.createdAt).toLocaleString() : "—", desc: `${e.failureReason ?? "Recovery event"} · ${e.attempts ?? 0} attempts`, outcome: e.outcome ?? "unknown" })))).catch(() => undefined); }, []);
+  useEffect(() => { if (!session.accessToken || !session.projectId) return; api.get<any>(`/api/v1/recovery?projectId=${encodeURIComponent(session.projectId)}&perPage=100`).then((items) => setEvents((items ?? []).map((e: any) => ({ ts: e.createdAt ? new Date(e.createdAt).toLocaleString() : "—", desc: `${e.failureReason ?? "Recovery event"} · ${e.attempts ?? 0} attempts`, outcome: e.outcome ?? "unknown" })))).catch((error) => setLoadError(error instanceof Error ? error.message : "Unable to load recovery events.")); }, []);
 
   const togglePlaybook = (t: string) => {
     setPlaybooks((s) => s.map((p) => p.t === t ? { ...p, on: !p.on } : p));
@@ -49,8 +50,8 @@ function SelfHealingPage() {
         subtitle="Detect provider failures in milliseconds and reroute around them. Circuit breakers, exponential backoff and intelligent fallbacks keep traffic flowing."
         accent="var(--neon-green)"
         actions={
-          <Btn onClick={runDrill} disabled={drillRunning}>
-            <Play className={`h-4 w-4 ${drillRunning ? "animate-pulse" : ""}`} /> {drillRunning ? "Running drill…" : "Run failover drill"}
+          <Btn onClick={runDrill} disabled title="The backend does not provide a failover drill endpoint.">
+            <Play className="h-4 w-4" /> Failover drill unavailable
           </Btn>
         }
       />
@@ -63,6 +64,8 @@ function SelfHealingPage() {
       </section>
 
       <Panel eyebrow="Timeline" title="Recovery Events">
+        {loadError && <div role="alert" className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">Unable to load recovery events: {loadError}</div>}
+        {!loadError && events.length === 0 && <p className="py-5 text-center text-sm text-muted-foreground">No recovery events recorded.</p>}
         <ol className="relative ml-3 border-l border-white/10">
           {events.map((e, i) => (
             <li key={`${e.ts}-${i}`} className="mb-4 ml-4">
@@ -79,6 +82,7 @@ function SelfHealingPage() {
       </Panel>
 
       <Panel eyebrow="Strategies" title="Active Recovery Playbooks">
+        <p className="mb-3 text-xs text-muted-foreground">Playbook configuration is not available through the current backend.</p>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {playbooks.map((s) => (
             <div key={s.t} className={`rounded-xl border bg-white/[0.03] p-4 transition-all ${s.on ? "border-[var(--neon-green)]/30" : "border-white/10 opacity-60"}`}>

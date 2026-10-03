@@ -37,9 +37,10 @@ function ObsPage() {
   const [lvlFilter, setLvlFilter] = useState<"all" | Log["lvl"]>("all");
   const [q, setQ] = useState("");
   const [paused, setPaused] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const idx = useRef(0);
 
-  useEffect(() => { if (!session.accessToken || !session.projectId) return; api.get<any>(`/api/v1/observability?projectId=${encodeURIComponent(session.projectId)}`).then((data) => { setRemote(data); setLogs((data.traces ?? []).map((t: any) => ({ ts: t.createdAt ? new Date(t.createdAt).toLocaleString() : "—", lvl: t.status === "SUCCESS" ? "info" : "error", msg: `${t.endpoint ?? "request"} · ${t.modelId ?? "unknown"} · ${t.latencyMs ?? 0}ms` }))); }).catch(() => undefined); }, [range]);
+  useEffect(() => { if (!session.accessToken || !session.projectId) return; api.get<any>(`/api/v1/observability?projectId=${encodeURIComponent(session.projectId)}`).then((data) => { setRemote(data); setLogs((data.traces ?? []).map((t: any) => ({ ts: t.createdAt ? new Date(t.createdAt).toLocaleString() : "—", lvl: t.status === "SUCCESS" ? "info" : "error", msg: `${t.endpoint ?? "request"} · ${t.modelId ?? "unknown"} · ${t.latencyMs ?? 0}ms` }))); }).catch((error) => setLoadError(error instanceof Error ? error.message : "Unable to load telemetry.")); }, [range]);
 
   useEffect(() => {
     if (paused) return;
@@ -69,6 +70,7 @@ function ObsPage() {
           </div>
         }
       />
+      {loadError && <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">Unable to load telemetry: {loadError}</div>}
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Spans / sec"   value="0" delta="No data"  color="var(--neon-cyan)"   icon={Radar} />
@@ -114,7 +116,7 @@ function ObsPage() {
         }
       >
         {visible.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-white/10 px-4 py-10 text-center text-sm text-muted-foreground">No logs match this filter.</div>
+          <div className="rounded-lg border border-dashed border-white/10 px-4 py-10 text-center text-sm text-muted-foreground">{loadError ? "Telemetry unavailable." : "No telemetry recorded yet."}</div>
         ) : (
           <div className="max-h-[360px] space-y-1 overflow-y-auto font-mono text-[12.5px]">
             {visible.map((l, i) => (

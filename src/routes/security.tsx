@@ -30,10 +30,11 @@ function SecurityPage() {
   const [sev, setSev] = useState<"all" | Threat["severity"]>("all");
   const [open, setOpen] = useState<Threat | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     if (!session.accessToken || !session.projectId) return;
-    api.get<any>(`/api/v1/security?projectId=${encodeURIComponent(session.projectId)}&perPage=100`).then((items) => setThreats((items ?? []).map((e: any) => ({ id: e.id, type: e.category ?? e.action ?? "Security event", source: e.source ?? "gateway", severity: String(e.severity ?? "medium").toLowerCase() as Threat["severity"], blocked: String(e.action ?? "").toLowerCase().includes("block"), ts: e.createdAt ? new Date(e.createdAt).toLocaleString() : "—" })))).catch(() => undefined);
+    api.get<any>(`/api/v1/security?projectId=${encodeURIComponent(session.projectId)}&perPage=100`).then((items) => setThreats((items ?? []).map((e: any) => ({ id: e.id, type: e.category ?? e.action ?? "Security event", source: e.source ?? "gateway", severity: String(e.severity ?? "medium").toLowerCase() as Threat["severity"], blocked: String(e.action ?? "").toLowerCase().includes("block"), ts: e.createdAt ? new Date(e.createdAt).toLocaleString() : "—" })))).catch((error) => setLoadError(error instanceof Error ? error.message : "Unable to load security events."));
   }, []);
 
   const visible = useMemo(() => sev === "all" ? threats : threats.filter((t) => t.severity === sev), [threats, sev]);
@@ -63,6 +64,7 @@ function SecurityPage() {
         <StatCard label="Coverage"              value="—" delta="No data" color="var(--neon-green)" icon={Shield} />
         <StatCard label="Risk Score"            value="—"   delta="No data"   color="var(--neon-cyan)" icon={Lock} />
       </section>
+      {loadError && <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">Unable to load security events: {loadError}</div>}
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">
         <Panel
@@ -80,8 +82,8 @@ function SecurityPage() {
           {visible.length === 0 ? (
             <div className="rounded-lg border border-dashed border-white/10 px-4 py-10 text-center">
               <ShieldCheck className="mx-auto h-8 w-8 text-[var(--neon-green)]/70" />
-              <div className="mt-2 text-sm font-medium">No threats in view</div>
-              <div className="text-xs text-muted-foreground">Your defenses are quiet right now.</div>
+              <div className="mt-2 text-sm font-medium">{loadError ? "Security data unavailable" : "No security events recorded"}</div>
+              {!loadError && <div className="text-xs text-muted-foreground">Events will appear here when the gateway records them.</div>}
             </div>
           ) : (
             <div className="space-y-2">

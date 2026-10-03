@@ -35,7 +35,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
@@ -86,11 +86,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:description", content: "Orchestra AI is the mission control center for enterprise AI: security, cost intelligence, model routing, self-healing, and observability in one futuristic dashboard." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Orchestra AI — Mission Control for Enterprise AI" },
       { name: "twitter:description", content: "Orchestra AI is the mission control center for enterprise AI: security, cost intelligence, model routing, self-healing, and observability in one futuristic dashboard." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/95a06c98-0321-4755-ad48-14ce3e6895fb" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/95a06c98-0321-4755-ad48-14ce3e6895fb" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

@@ -98,7 +98,7 @@ Application rollback should use the previous immutable image. Database migration
 The frontend remains deployable to Vercel. Set:
 
 ```text
-VITE_BACKEND_URL=https://<your-api-domain>
+VITE_API_URL=https://<your-api-domain>
 VITE_DEMO_MODE=false
 ```
 

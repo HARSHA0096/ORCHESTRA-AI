@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, PageHero, Panel, Btn } from "@/components/app-shell";
 import { BellRing, AlertTriangle, ShieldAlert, Sparkles, CheckCircle2, DollarSign, X, CheckCheck } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({
@@ -32,6 +33,9 @@ const FILTERS = ["All", "Unread", "Security", "Cost", "Recovery", "Platform"] as
 function NotificationsPage() {
   const [items, setItems] = useState<Notif[]>(SEED);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  useEffect(() => { let active = true; api.get<any>("/api/v1/notifications?perPage=100").then((result) => { if (active) setItems((result ?? []).map((item: any) => ({ id: item.id, icon: item.category === "SECURITY" ? ShieldAlert : item.category === "COST" ? DollarSign : Sparkles, color: item.category === "SECURITY" ? "var(--neon-pink)" : "var(--neon-cyan)", title: item.title ?? item.type ?? "Notification", body: item.message ?? item.description ?? "", ts: item.createdAt ? new Date(item.createdAt).toLocaleString() : "—", cat: String(item.category ?? "platform").toLowerCase(), read: Boolean(item.readAt) }))); }).catch((err) => { if (active) setError(err instanceof Error ? err.message : "Unable to load notifications."); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
 
   const visible = useMemo(() => items.filter((n) => {
     if (filter === "All") return true;
@@ -41,15 +45,8 @@ function NotificationsPage() {
 
   const unread = items.filter((n) => !n.read).length;
 
-  const markAllRead = () => {
-    setItems((s) => s.map((n) => ({ ...n, read: true })));
-    toast.success("All notifications marked as read");
-  };
-  const toggleRead = (id: string) => setItems((s) => s.map((n) => n.id === id ? { ...n, read: !n.read } : n));
-  const dismiss = (id: string) => {
-    setItems((s) => s.filter((n) => n.id !== id));
-    toast.message("Notification dismissed");
-  };
+  const markAllRead = async () => { try { await api.patch("/api/v1/notifications/read-all", {}); setItems((s) => s.map((n) => ({ ...n, read: true }))); toast.success("All notifications marked as read"); } catch (err) { toast.error(err instanceof Error ? err.message : "Unable to update notifications"); } };
+  const toggleRead = async (id: string) => { try { await api.patch(`/api/v1/notifications/${id}/read`, {}); setItems((s) => s.map((n) => n.id === id ? { ...n, read: true } : n)); } catch (err) { toast.error(err instanceof Error ? err.message : "Unable to update notification"); } };
 
   return (
     <AppShell>
@@ -79,7 +76,8 @@ function NotificationsPage() {
           </div>
         }
       >
-        {visible.length === 0 ? (
+        {error && <div role="alert" className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">Unable to load notifications: {error}</div>}
+        {loading ? <div role="status" className="py-8 text-center text-sm text-muted-foreground">Loading notifications…</div> : visible.length === 0 ? (
           <div className="rounded-lg border border-dashed border-white/10 px-4 py-12 text-center">
             <BellRing className="mx-auto h-8 w-8 text-muted-foreground/60" />
             <div className="mt-3 font-display text-sm font-medium">You're all caught up</div>
@@ -105,10 +103,10 @@ function NotificationsPage() {
                     <div className="mt-0.5 text-sm text-muted-foreground">{n.body}</div>
                   </button>
                   <span className="shrink-0 font-mono text-[11px] text-muted-foreground">{n.ts}</span>
-                  <button onClick={() => dismiss(n.id)} aria-label="Dismiss"
-                          className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-white/5 hover:text-foreground group-hover:opacity-100">
+                  <span aria-label="Dismiss unavailable"
+                          className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground opacity-50">
                     <X className="h-3.5 w-3.5" />
-                  </button>
+                  </span>
                 </div>
               );
             })}

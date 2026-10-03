@@ -27,14 +27,16 @@ function CostPage() {
   const [modelSpend, setModelSpend] = useState<{ name: string; spend: number; color: string }[]>([]);
   const [editing, setEditing] = useState<Budget | null>(null);
   const [draft, setDraft] = useState(0);
+  const [loadError, setLoadError] = useState("");
 
-  useEffect(() => { if (!session.accessToken || !session.projectId) return; Promise.all([api.get<any>(`/api/v1/projects/${session.projectId}/budget`), api.get<any>(`/api/v1/history?projectId=${encodeURIComponent(session.projectId)}&perPage=100`)]).then(([budget, history]) => { const used = (history ?? []).reduce((sum: number, e: any) => sum + Number(e.cost ?? 0), 0); setSpend(used); const grouped = new Map<string, number>(); (history ?? []).forEach((e: any) => grouped.set(e.modelId ?? "unknown", (grouped.get(e.modelId ?? "unknown") ?? 0) + Number(e.cost ?? 0))); setModelSpend(Array.from(grouped, ([name, value]) => ({ name, spend: value, color: "var(--neon-cyan)" }))); setBudgets(budget ? [{ project: "Current project", used, cap: Number(budget.limitAmount ?? 0) }] : []); }).catch(() => undefined); }, []);
+  useEffect(() => { if (!session.accessToken || !session.projectId) return; Promise.all([api.get<any>(`/api/v1/projects/${session.projectId}/budget`), api.get<any>(`/api/v1/history?projectId=${encodeURIComponent(session.projectId)}&perPage=100`)]).then(([budget, history]) => { const used = (history ?? []).reduce((sum: number, e: any) => sum + Number(e.cost ?? 0), 0); setSpend(used); const grouped = new Map<string, number>(); (history ?? []).forEach((e: any) => grouped.set(e.modelId ?? "unknown", (grouped.get(e.modelId ?? "unknown") ?? 0) + Number(e.cost ?? 0))); setModelSpend(Array.from(grouped, ([name, value]) => ({ name, spend: value, color: "var(--neon-cyan)" }))); setBudgets(budget ? [{ project: "Current project", used, cap: Number(budget.limitAmount ?? 0) }] : []); }).catch((error) => setLoadError(error instanceof Error ? error.message : "Unable to load cost data.")); }, []);
 
   const openEdit = (b: Budget) => { setDraft(b.cap); setEditing(b); };
-  const save = () => {
+  const save = async () => {
     if (!editing) return;
     if (draft < 0 || isNaN(draft)) { toast.error("Cap must be a positive number"); return; }
-    setBudgets((s) => s.map((b) => b.project === editing.project ? { ...b, cap: draft } : b));
+    try { await api.patch(`/api/v1/projects/${session.projectId}/budget`, { limitAmount: draft }); setBudgets((s) => s.map((b) => b.project === editing.project ? { ...b, cap: draft } : b)); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update budget"); return; }
     toast.success(`${editing.project} budget updated`);
     setEditing(null);
   };
@@ -47,6 +49,7 @@ function CostPage() {
         subtitle="See exactly where every dollar goes. Forecast spend, enforce budgets per project and unlock savings through smart routing and caching."
         accent="var(--neon-green)"
       />
+      {loadError && <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">Unable to load cost data: {loadError}</div>}
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="MTD Spend"        value={`$${spend.toFixed(4)}`} delta={spend ? "Live" : "No data"}  color="var(--neon-green)"  icon={DollarSign} />

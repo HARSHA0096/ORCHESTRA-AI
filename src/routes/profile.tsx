@@ -3,6 +3,7 @@ import { AppShell, PageHero, Panel, StatCard, Modal, Btn } from "@/components/ap
 import { User, Mail, Shield, Activity, KeyRound, Pencil, LogOut, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { api, session } from "@/lib/api";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/profile")({
   component: ProfilePage,
 });
 
-type Identity = { name: string; email: string; mfa: string; sso: string };
+type Identity = { name: string; email: string; mfa: string; sso: string; role: string };
 type Session = { id: string; device: string; loc: string; ip: string; last: string };
 
 const DEFAULT_ID: Identity = {
@@ -22,6 +23,7 @@ const DEFAULT_ID: Identity = {
   email: "",
   mfa: "Not configured",
   sso: "Not configured",
+  role: "—",
 };
 const SEED_SESS: Session[] = [];
 
@@ -33,30 +35,26 @@ function ProfilePage() {
   const [revoke, setRevoke] = useState<Session | null>(null);
   const [signOutAll, setSignOutAll] = useState(false);
 
-  useEffect(() => {
-    try { const raw = window.localStorage.getItem("orchestra.profile"); if (raw) setId({ ...DEFAULT_ID, ...JSON.parse(raw) }); } catch { /* */ }
-  }, []);
-  useEffect(() => { window.localStorage.setItem("orchestra.profile", JSON.stringify(id)); }, [id]);
+  useEffect(() => { let active = true; api.get<any>("/api/v1/auth/me").then((user) => { if (active) setId({ ...DEFAULT_ID, name: [user.firstName, user.lastName].filter(Boolean).join(" "), email: user.email ?? "", role: user.role ?? "—" }); }).catch((error) => toast.error(error instanceof Error ? error.message : "Unable to load profile")); api.get<any[]>("/api/v1/auth/sessions").then((items) => { if (active) setSessions((items ?? []).map((item: any) => ({ id: item.id, device: item.deviceName ?? item.userAgent ?? "Session", loc: "—", ip: item.ipAddress ?? "—", last: item.createdAt ? new Date(item.createdAt).toLocaleString() : "—" }))); }).catch((error) => toast.error(error instanceof Error ? error.message : "Unable to load sessions")); return () => { active = false; }; }, []);
 
   const openEdit = (k: keyof Identity, l: string) => { setDraft(id[k]); setEdit({ k, l }); };
   const saveEdit = () => {
     if (!edit) return;
     if (!draft.trim()) { toast.error("Cannot be empty"); return; }
     if (edit.k === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft)) { toast.error("Invalid email"); return; }
-    setId((s) => ({ ...s, [edit.k]: draft.trim() }));
-    toast.success(`${edit.l} updated`);
+    if (edit.k !== "name") { toast.error("Email, MFA, and SSO changes are not configured for this account."); setEdit(null); return; }
+    const [firstName, ...rest] = draft.trim().split(/\s+/);
+    void api.patch("/api/v1/auth/me", { firstName, lastName: rest.join(" ") || firstName }).then(() => { setId((s) => ({ ...s, name: draft.trim() })); toast.success("Name updated"); }).catch((error) => toast.error(error instanceof Error ? error.message : "Unable to update name"));
     setEdit(null);
   };
   const initials = id.name.split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
   const doRevoke = () => {
     if (!revoke) return;
-    setSessions((s) => s.filter((x) => x.id !== revoke.id));
-    toast.success("Session revoked");
+    void api.delete(`/api/v1/auth/sessions/${revoke.id}`).then(() => { setSessions((s) => s.filter((x) => x.id !== revoke.id)); toast.success("Session revoked"); }).catch((error) => toast.error(error instanceof Error ? error.message : "Unable to revoke session"));
     setRevoke(null);
   };
   const doSignOutAll = () => {
-    setSessions((s) => s.filter((x) => x.last === "Active now"));
-    toast.success("Signed out of all other sessions");
+    void api.delete("/api/v1/auth/sessions").then(() => { session.clear(); toast.success("All sessions revoked. Sign in again."); window.location.assign("/login"); }).catch((error) => toast.error(error instanceof Error ? error.message : "Unable to revoke sessions"));
     setSignOutAll(false);
   };
 
@@ -76,11 +74,11 @@ function ProfilePage() {
             <div className="grid h-20 w-20 place-items-center rounded-full font-display text-2xl font-bold text-[oklch(0.16_0.04_270)]"
                  style={{ background: "var(--gradient-pink-violet)", boxShadow: "var(--shadow-glow-violet)" }}>{initials}</div>
             <div className="mt-3 font-display text-lg font-semibold">{id.name}</div>
-            <div className="text-xs text-muted-foreground">Demo Environment · ORCHESTRA</div>
+            <div className="text-xs text-muted-foreground">Authenticated ORCHESTRA account</div>
             <div className="mt-4 grid w-full grid-cols-3 gap-2 text-xs">
-              <div className="rounded-md bg-white/[0.03] p-2"><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Role</div><div className="mt-0.5 font-mono text-[var(--neon-violet)]">admin</div></div>
-              <div className="rounded-md bg-white/[0.03] p-2"><div className="text-[10px] uppercase tracking-wider text-muted-foreground">MFA</div><div className="mt-0.5 font-mono text-[var(--neon-green)]">on</div></div>
-              <div className="rounded-md bg-white/[0.03] p-2"><div className="text-[10px] uppercase tracking-wider text-muted-foreground">SSO</div><div className="mt-0.5 font-mono text-[var(--neon-cyan)]">okta</div></div>
+              <div className="rounded-md bg-white/[0.03] p-2"><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Role</div><div className="mt-0.5 font-mono text-[var(--neon-violet)]">{id.role}</div></div>
+              <div className="rounded-md bg-white/[0.03] p-2"><div className="text-[10px] uppercase tracking-wider text-muted-foreground">MFA</div><div className="mt-0.5 font-mono">Not configured</div></div>
+              <div className="rounded-md bg-white/[0.03] p-2"><div className="text-[10px] uppercase tracking-wider text-muted-foreground">SSO</div><div className="mt-0.5 font-mono">Not configured</div></div>
             </div>
           </div>
         </Panel>
@@ -103,7 +101,7 @@ function ProfilePage() {
               ].map((f) => {
                 const Icon = f.icon;
                 return (
-                  <button key={f.l} onClick={() => openEdit(f.k, f.l)}
+                  <button key={f.l} onClick={() => openEdit(f.k, f.l)} disabled={f.k !== "name"}
                           className="group flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] p-3 text-left transition-colors hover:border-white/15 hover:bg-white/[0.04]">
                     <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/[0.04] text-[var(--neon-cyan)]"><Icon className="h-4 w-4" /></div>
                     <div className="min-w-0 flex-1">

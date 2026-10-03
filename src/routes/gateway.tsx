@@ -3,6 +3,7 @@ import { AppShell, PageHero, Panel, StatCard, Modal, Btn } from "@/components/ap
 import { Network, Zap, Globe2, ShieldCheck, Cpu, Search, Send, Loader2, Radio } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useMemo, useState } from "react";
+import { api, session } from "@/lib/api";
 
 export const Route = createFileRoute("/gateway")({
   head: () => ({
@@ -28,7 +29,6 @@ function GatewayPage() {
   const [open, setOpen] = useState<Endpoint | null>(null);
   const [prompt, setPrompt] = useState("Explain how ORCHESTRA AI works");
   const [response, setResponse] = useState("");
-  const [stream, setStream] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -55,38 +55,18 @@ function GatewayPage() {
         accent="var(--neon-cyan)"
       />
 
-      <Panel eyebrow="Live Gateway" title="Try an AI Request" actions={<span className="inline-flex items-center gap-1.5 rounded-md bg-[oklch(0.85_0.21_155/0.12)] px-2 py-1 text-[10px] uppercase tracking-wider text-[var(--neon-green)]"><Radio className="h-3 w-3" /> Demo provider online</span>}>
+      <Panel eyebrow="Live Gateway" title="Try an AI Request" actions={<span className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground"><Radio className="h-3 w-3" /> Demo provider selected</span>}>
         <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
           <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={4} className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--neon-violet)]" placeholder="Ask ORCHESTRA anything…" />
           <div className="flex flex-col justify-between gap-3">
-            <label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={stream} onChange={(e) => setStream(e.target.checked)} /> Stream response</label>
             <button disabled={loading || !prompt.trim()} onClick={async () => {
               setLoading(true); setError(""); setResponse("");
               try {
-                const base = (import.meta.env.VITE_BACKEND_URL as string | undefined) || "http://localhost:3001";
-                const res = await fetch(`${base}/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "orchestra-demo-model", messages: [{ role: "user", content: prompt }], stream }) });
-                if (!res.ok) throw new Error((await res.text()) || `Request failed (${res.status})`);
-                if (!stream) { const data = await res.json(); setResponse(data.choices?.[0]?.message?.content || "No response"); }
-                else {
-                  if (!res.body) throw new Error("Streaming response body unavailable");
-                  const reader = res.body.getReader(); const decoder = new TextDecoder(); let buffer = "";
-                  while (true) { const { value, done } = await reader.read(); if (done) break; buffer += decoder.decode(value, { stream: true }); const parts = buffer.split("\n\n"); buffer = parts.pop() || ""; for (const part of parts) { const line = part.split("\n").find((x) => x.startsWith("data: ")); if (!line) continue; const payload = line.slice(6); if (payload === "[DONE]") continue; try { const chunk = JSON.parse(payload); setResponse((current) => current + (chunk.choices?.[0]?.delta?.content || "")); } catch {} } }
-                }
-              } catch (e) {
-                if (import.meta.env.VITE_DEMO_MODE === 'true') {
-                  const fallback = `Orchestra AI Demo Response\n\nI processed your request through the ORCHESTRA middleware demonstration.\n\nRequest: ${prompt.trim()}\n\nDemo Mode is active, so no external AI provider is required. The full backend pipeline is available when the gateway is running.`;
-                  if (stream) {
-                    setResponse('');
-                    for (const part of fallback.split(/(\s+)/).filter(Boolean)) {
-                      await new Promise((resolve) => setTimeout(resolve, 8));
-                      setResponse((current) => current + part);
-                    }
-                  } else { setResponse(fallback); }
-                  try {
-                    await fetch("/api/demo-event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "orchestra-demo-model", latencyMs: 42, costUsd: 0.000001, inputTokens: Math.max(1, Math.ceil(prompt.trim().length / 4)), outputTokens: Math.max(8, Math.ceil(fallback.length / 4)) }) });
-                  } catch {}
-                } else { setError(e instanceof Error ? e.message : "Request failed"); }
-              } finally { setLoading(false); }
+                if (!session.projectId) throw new Error("Select a project before sending a gateway request.");
+                const result = await api.post<any>("/api/v1/gateway/", { prompt: prompt.trim(), provider: "demo", model: "orchestra-demo-model", projectId: session.projectId, requestType: "chat", streaming: false });
+                setResponse(`${result.response ?? result.content ?? "No response returned."}\n\nRequest ID: ${result.requestId ?? "—"}\nProvider: ${result.provider ?? "demo"}\nModel: ${result.model ?? "orchestra-demo-model"}\nLatency: ${result.latencyMs ?? "—"} ms\nTokens: ${result.usage?.totalTokens ?? "—"}\nEstimated cost: ${result.cost ?? result.estimatedCost ?? "—"}\nRouting/security: ${result.metadata ? JSON.stringify(result.metadata) : "Not provided by backend"}`);
+              } catch (e) { setError(e instanceof Error ? e.message : "Gateway request failed. Check the API connection."); }
+              finally { setLoading(false); }
             }} className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-[oklch(0.16_0.04_270)] disabled:opacity-50" style={{ background: "var(--gradient-violet-cyan)" }}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} {loading ? "Running…" : "Send request"}
             </button>

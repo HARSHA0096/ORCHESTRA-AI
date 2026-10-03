@@ -18,41 +18,38 @@ export const Route = createFileRoute("/projects")({
 type Project = {
   id: string;
   name: string;
-  env: "prod" | "staging" | "dev";
-  models: number;
+  env: string;
   reqs: string;
   spend: string;
-  status: "healthy" | "guarded" | "degraded";
+  status: string;
   color: string;
   archived?: boolean;
 };
 
 const SEED: Project[] = [];
 
-const STORAGE = "orchestra.projects";
-const ENV_COLORS: Record<Project["env"], string> = {
-  prod: "var(--neon-green)", staging: "var(--neon-cyan)", dev: "var(--neon-amber)",
-};
-
 function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>(SEED);
   const [q, setQ] = useState("");
-  const [envFilter, setEnvFilter] = useState<"all" | Project["env"]>("all");
   const [showArchived, setShowArchived] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);
-  const [form, setForm] = useState({ name: "", env: "dev" as Project["env"] });
+  const [form, setForm] = useState({ name: "" });
+  const [loadError, setLoadError] = useState("");
+  const [selectedProject, setSelectedProject] = useState(() => session.projectId);
 
   useEffect(() => {
     if (!session.accessToken) return;
     api.get<any[]>("/api/v1/organizations").then(async (orgs) => {
       const org = orgs[0]; if (!org) return;
       const data = await api.get<any[]>(`/api/v1/organizations/${org.id}/projects`);
-      if (!session.projectId && data?.[0]) session.setProject(data[0].id, org.id); else session.setProject(session.projectId ?? "", org.id);
-      setProjects((data ?? []).map((p: any) => ({ id: p.id, name: p.name, env: "dev", models: 0, reqs: "0", spend: "$0", status: p.status === "ACTIVE" ? "healthy" : "guarded", color: ENV_COLORS.dev, archived: Boolean(p.archived) })));
-    }).catch(() => undefined);
+      const selection = data?.find((p) => p.id === session.projectId) ?? data?.[0];
+      session.setProject(selection?.id ?? "", org.id);
+      setSelectedProject(selection?.id ?? null);
+      setProjects((data ?? []).map((p: any) => ({ id: p.id, name: p.name, env: "Not configured", reqs: "—", spend: "—", status: String(p.status ?? "unknown").toLowerCase(), color: "var(--neon-cyan)", archived: Boolean(p.archived) })));
+    }).catch((error) => setLoadError(error instanceof Error ? error.message : "Unable to load projects. Check the gateway connection."));
   }, []);
 
 
@@ -65,13 +62,12 @@ function ProjectsPage() {
   const visible = useMemo(() => projects.filter((p) => {
     if (!showArchived && p.archived) return false;
     if (showArchived && !p.archived) return false;
-    if (envFilter !== "all" && p.env !== envFilter) return false;
     if (q && !p.name.toLowerCase().includes(q.toLowerCase())) return false;
     return true;
-  }), [projects, q, envFilter, showArchived]);
+  }), [projects, q, showArchived]);
 
-  const openCreate = () => { setForm({ name: "", env: "dev" }); setCreateOpen(true); };
-  const openEdit = (p: Project) => { setForm({ name: p.name, env: p.env }); setEditing(p); };
+  const openCreate = () => { setForm({ name: "" }); setCreateOpen(true); };
+  const openEdit = (p: Project) => { setForm({ name: p.name }); setEditing(p); };
 
   const submitCreate = async () => {
     const name = form.name.trim();
@@ -80,19 +76,19 @@ function ProjectsPage() {
     if (!orgId) { toast.error("Select or create an organization first"); return; }
     try {
       const p = await api.post<any>(`/api/v1/organizations/${orgId}/projects`, { name });
-      setProjects((s) => [{ id: p.id, name: p.name, env: form.env, models: 0, reqs: "0", spend: "$0", status: "healthy", color: ENV_COLORS[form.env] }, ...s]);
-      session.setProject(p.id, orgId); toast.success(`Project "${name}" created`); setCreateOpen(false);
+      setProjects((s) => [{ id: p.id, name: p.name, env: "Not configured", reqs: "—", spend: "—", status: String(p.status ?? "unknown").toLowerCase(), color: "var(--neon-cyan)" }, ...s]);
+      session.setProject(p.id, orgId); setSelectedProject(p.id); toast.success(`Project "${name}" created`); setCreateOpen(false);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Unable to create project"); }
   };
   const submitEdit = async () => {
     if (!editing) return;
     const name = form.name.trim();
     if (!name) { toast.error("Name is required"); return; }
-    try { await api.patch(`/api/v1/organizations/${session.organizationId}/projects/${editing.id}`, { name }); setProjects((s) => s.map((p) => p.id === editing.id ? { ...p, name, env: form.env, color: ENV_COLORS[form.env] } : p)); toast.success("Project updated"); setEditing(null); } catch (e) { toast.error(e instanceof Error ? e.message : "Unable to update project"); }
+    try { await api.patch(`/api/v1/organizations/${session.organizationId}/projects/${editing.id}`, { name }); setProjects((s) => s.map((p) => p.id === editing.id ? { ...p, name } : p)); toast.success("Project updated"); setEditing(null); } catch (e) { toast.error(e instanceof Error ? e.message : "Unable to update project"); }
   };
-  const duplicate = (p: Project) => {
-    setProjects((s) => [{ ...p, id: `p${Date.now()}`, name: `${p.name} (copy)` }, ...s]);
-    toast.success(`Duplicated "${p.name}"`);
+  const duplicate = async (p: Project) => {
+    try { const copy = await api.post<any>(`/api/v1/organizations/${session.organizationId}/projects/${p.id}/duplicate`, {}); setProjects((s) => [{ ...p, id: copy.id, name: copy.name }, ...s]); toast.success(`Duplicated "${p.name}"`); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Unable to duplicate project"); }
   };
   const archive = async (p: Project) => {
     try { await api.post(`/api/v1/organizations/${session.organizationId}/projects/${p.id}/archive`, {}); setProjects((s) => s.map((x) => x.id === p.id ? { ...x, archived: !x.archived } : x)); toast.message(p.archived ? "Project restored" : "Project archived"); } catch (e) { toast.error(e instanceof Error ? e.message : "Unable to archive project"); }
@@ -100,8 +96,7 @@ function ProjectsPage() {
   const confirmDelete = async () => {
     if (!deleting || !session.organizationId) return;
     try {
-      const response = await fetch(`${(import.meta.env.VITE_BACKEND_URL as string | undefined) || "http://localhost:3001"}/api/v1/organizations/${session.organizationId}/projects/${deleting.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${session.accessToken}` } });
-      if (!response.ok) throw new Error("Unable to delete project");
+      await api.delete(`/api/v1/organizations/${session.organizationId}/projects/${deleting.id}`);
       setProjects((s) => s.filter((p) => p.id !== deleting.id)); toast.success(`Deleted "${deleting.name}"`); setDeleting(null);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Unable to delete project"); }
   };
@@ -111,7 +106,7 @@ function ProjectsPage() {
   return (
     <AppShell>
       <PageHero
-        eyebrow="Workspace · ORCHESTRA Demo"
+        eyebrow="Workspace · Projects"
         title="Projects"
         subtitle="Provision, monitor and govern every AI workload across environments. Each project carries its own routing strategy, security posture and cost budget."
         accent="var(--neon-violet)"
@@ -120,9 +115,9 @@ function ProjectsPage() {
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Active Projects" value={String(active)} delta="Current" color="var(--neon-violet)" icon={Boxes} />
-        <StatCard label="Deployments (24h)" value="0" delta="No data" color="var(--neon-cyan)" icon={Rocket} />
-        <StatCard label="Branches Tracked" value="0" delta="No data" color="var(--neon-pink)" icon={GitBranch} />
-        <StatCard label="Team Members" value="0" delta="No data" color="var(--neon-green)" icon={Users} />
+        <StatCard label="Deployments (24h)" value="—" delta="No data" color="var(--neon-cyan)" icon={Rocket} />
+        <StatCard label="Branches Tracked" value="—" delta="No data" color="var(--neon-pink)" icon={GitBranch} />
+        <StatCard label="Team Members" value="—" delta="No data" color="var(--neon-green)" icon={Users} />
       </section>
 
       <Panel
@@ -130,12 +125,6 @@ function ProjectsPage() {
         title={showArchived ? "Archived" : "All Projects"}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex gap-1 rounded-md border border-white/10 bg-white/[0.03] p-0.5 text-[11px]">
-              {(["all", "prod", "staging", "dev"] as const).map((e) => (
-                <button key={e} onClick={() => setEnvFilter(e)}
-                        className={`rounded px-2 py-1 capitalize transition-colors ${envFilter === e ? "bg-white/10 text-foreground" : "text-muted-foreground hover:text-foreground"}`}>{e}</button>
-              ))}
-            </div>
             <button onClick={() => setShowArchived((v) => !v)}
                     className={`rounded-md border border-white/10 px-2 py-1 text-[11px] ${showArchived ? "bg-white/10 text-foreground" : "bg-white/[0.03] text-muted-foreground hover:text-foreground"}`}>
               {showArchived ? "Showing archived" : "Show archived"}
@@ -148,11 +137,12 @@ function ProjectsPage() {
           </div>
         }
       >
+        {loadError && <div role="alert" className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">Unable to load projects: {loadError}</div>}
         {visible.length === 0 ? (
           <div className="rounded-lg border border-dashed border-white/10 px-4 py-16 text-center">
             <Boxes className="mx-auto h-10 w-10 text-muted-foreground/40" />
             <div className="mt-3 font-display text-base font-medium">No projects found</div>
-            <div className="mt-1 text-xs text-muted-foreground">{q || envFilter !== "all" ? "Try clearing filters." : "Create your first project to get started."}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{q ? "Try clearing the search." : "Create your first project to get started."}</div>
             <div className="mt-4 flex justify-center"><Btn onClick={openCreate}><Plus className="h-4 w-4" /> New Project</Btn></div>
           </div>
         ) : (
@@ -164,7 +154,8 @@ function ProjectsPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="truncate font-display text-base font-semibold">{p.name}</div>
-                    <div className="mt-0.5 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{p.env} · {p.models} models</div>
+                    <div className="mt-0.5 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Environment: {p.env}</div>
+                    <button type="button" onClick={() => { session.setProject(p.id, session.organizationId ?? undefined); setSelectedProject(p.id); toast.success(`Selected ${p.name}`); }} className="mt-2 rounded border border-white/10 px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground">{selectedProject === p.id ? "Selected project" : "Use project"}</button>
                   </div>
                   <div className="flex items-center gap-1">
                     <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-1.5 py-0.5 text-[10px]" style={{ color: p.color }}>
@@ -201,17 +192,11 @@ function ProjectsPage() {
                   </div>
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
-                  <div className="rounded-md bg-white/[0.03] p-2">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Reqs</div>
-                    <div className="mt-0.5 font-mono">{p.reqs}</div>
-                  </div>
-                  <div className="rounded-md bg-white/[0.03] p-2">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Spend</div>
-                    <div className="mt-0.5 font-mono text-[var(--neon-green)]">{p.spend}</div>
-                  </div>
+                  <div className="rounded-md bg-white/[0.03] p-2"><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Requests</div><div className="mt-0.5 font-mono">{p.reqs}</div></div>
+                  <div className="rounded-md bg-white/[0.03] p-2"><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Spend</div><div className="mt-0.5 font-mono text-[var(--neon-green)]">{p.spend}</div></div>
                   <div className="rounded-md bg-white/[0.03] p-2">
                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground">P95</div>
-                    <div className="mt-0.5 font-mono">412ms</div>
+                    <div className="mt-0.5 font-mono">—</div>
                   </div>
                 </div>
                 <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
@@ -250,8 +235,8 @@ function ProjectFormModal({
   open, title, form, setForm, onClose, onSubmit, cta,
 }: {
   open: boolean; title: string;
-  form: { name: string; env: Project["env"] };
-  setForm: (v: { name: string; env: Project["env"] }) => void;
+  form: { name: string };
+  setForm: (v: { name: string }) => void;
   onClose: () => void; onSubmit: () => void; cta: string;
 }) {
   const ref = useRef<HTMLInputElement>(null);
@@ -265,17 +250,6 @@ function ProjectFormModal({
           <input ref={ref} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={64}
                  placeholder="e.g. Atlas Copilot"
                  className="h-9 w-full rounded-md border border-white/10 bg-white/[0.03] px-3 text-sm focus:border-[var(--neon-violet)]/40 focus:outline-none focus:ring-1 focus:ring-[var(--neon-violet)]/30" />
-        </div>
-        <div>
-          <label className="mb-1 block text-[11px] uppercase tracking-wider text-muted-foreground">Environment</label>
-          <div className="grid grid-cols-3 gap-2">
-            {(["dev", "staging", "prod"] as const).map((e) => (
-              <button key={e} type="button" onClick={() => setForm({ ...form, env: e })}
-                      className={`rounded-md border px-3 py-2 text-sm capitalize transition-colors ${form.env === e ? "border-[var(--neon-violet)]/50 bg-[oklch(0.7_0.24_295/0.15)] text-foreground" : "border-white/10 bg-white/[0.03] text-muted-foreground hover:text-foreground"}`}>
-                {e}
-              </button>
-            ))}
-          </div>
         </div>
       </form>
     </Modal>

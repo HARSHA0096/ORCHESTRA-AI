@@ -21,6 +21,7 @@ import { Route as ObservabilityRouteImport } from './routes/observability'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as ProvidersRouteImport } from './routes/providers'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as RouterRouteImport } from './routes/router'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SelfHealingRouteImport } from './routes/self-healing'
@@ -91,6 +92,11 @@ const ProvidersRoute = ProvidersRouteImport.update({
   path: '/providers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RouterRoute = RouterRouteImport.update({
   id: '/router',
   path: '/router',
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/projects': typeof ProjectsRoute
   '/providers': typeof ProvidersRoute
+  '/register': typeof RegisterRoute
   '/router': typeof RouterRoute
   '/security': typeof SecurityRoute
   '/self-healing': typeof SelfHealingRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/projects': typeof ProjectsRoute
   '/providers': typeof ProvidersRoute
+  '/register': typeof RegisterRoute
   '/router': typeof RouterRoute
   '/security': typeof SecurityRoute
   '/self-healing': typeof SelfHealingRoute
@@ -197,6 +205,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/projects': typeof ProjectsRoute
   '/providers': typeof ProvidersRoute
+  '/register': typeof RegisterRoute
   '/router': typeof RouterRoute
   '/security': typeof SecurityRoute
   '/self-healing': typeof SelfHealingRoute
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/projects'
     | '/providers'
+    | '/register'
     | '/router'
     | '/security'
     | '/self-healing'
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/projects'
     | '/providers'
+    | '/register'
     | '/router'
     | '/security'
     | '/self-healing'
@@ -268,6 +279,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/projects'
     | '/providers'
+    | '/register'
     | '/router'
     | '/security'
     | '/self-healing'
@@ -292,6 +304,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   ProjectsRoute: typeof ProjectsRoute
   ProvidersRoute: typeof ProvidersRoute
+  RegisterRoute: typeof RegisterRoute
   RouterRoute: typeof RouterRoute
   SecurityRoute: typeof SecurityRoute
   SelfHealingRoute: typeof SelfHealingRoute
@@ -388,6 +401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProvidersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/router': {
       id: '/router'
       path: '/router'
@@ -479,6 +499,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ProjectsRoute: ProjectsRoute,
   ProvidersRoute: ProvidersRoute,
+  RegisterRoute: RegisterRoute,
   RouterRoute: RouterRoute,
   SecurityRoute: SecurityRoute,
   SelfHealingRoute: SelfHealingRoute,
